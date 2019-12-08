@@ -12,10 +12,10 @@ This is a working fork of MiSTer-devel to add experimental features that may not
 * For end users, use of mister-lab main and cores must be immediately revertable by change of files.
 
 ## Proposed Methodology
-* 'master' should be use to keep in sync with the main upstream repo
+* 'master' is used to keep in sync with the main upstream repo. It represent the revision we last merged to.
 * New features should be added to branches that are kept easy to merge
-* We use an 'unstable' branch to collect all features for people to try 
-* Mature features will be merged into a 'stable' branch 
-* Users are free to select it they want the OG firmware, stable labs firmware, or wild-west labs firmware
+* 'labs-stable' will be used to collect features considered mature and mergable upstream (whenever that may be)
+* 'labs-unstable' contains experimental builds with all the bleeding edge items
+* Users are free to select whether they want the OG firmware, stable labs firmware, or wild-west labs firmware
 * We should strive to keep delta with OG firmware minimal, and improve developer QoL to make it safer to try changes. 
   
