@@ -95,6 +95,8 @@ void input_switch(int grab);
 int input_state();
 void input_uinp_destroy();
 
+uint32_t joypad_status(uint32_t joy_num);
+
 extern char joy_bnames[NUMBUTTONS][32];
 extern int  joy_bcount;
 

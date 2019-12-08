@@ -31,6 +31,7 @@ static void trim(char * s)
 static char joy_nnames[NUMBUTTONS][32];
 static char joy_pnames[NUMBUTTONS][32];
 static int defaults = 0;
+static uint32_t joy_status[4];
 
 static void get_buttons()
 {
@@ -249,3 +250,22 @@ void map_joystick(uint32_t *map, uint32_t *mmap)
 
 	Info(mapinfo, 6000);
 }
+
+
+// status reporting from outside functions
+uint32_t set_joypad_status(uint32_t dev, uint32_t index, uint32_t value) {
+	if (index > 32) return joy_status[dev];
+	if (dev > 4) dev = 0;
+	if (value)
+		joy_status[dev] |= (0x1 << index);
+	else
+		joy_status[dev] &= ~(0x1 << index);
+	printf("joy status: %d", joy_status[dev]);
+	return joy_status[dev];
+}
+
+uint32_t get_joypad_status(uint32_t dev) {
+	if (dev > 4) dev = 0;
+	return joy_status[dev];
+}
+

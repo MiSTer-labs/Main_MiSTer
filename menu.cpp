@@ -56,6 +56,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "cheats.h"
 #include "video.h"
 #include "joymapping.h"
+#include "osd_joypad.h"
 
 #include "support.h"
 
@@ -111,6 +112,9 @@ enum MENU
 	MENU_JOYKBDMAP1,
 	MENU_KBDMAP,
 	MENU_KBDMAP1,
+	MENU_JOYPAD_TEST,
+	MENU_JOYPAD_TEST1,
+	MENU_JOYPAD_TEST2,
 	MENU_SCRIPTS_PRE,
 	MENU_SCRIPTS_PRE1,
 	MENU_SCRIPTS,
@@ -218,6 +222,9 @@ static const char *helptexts[] =
 static const char *info_top = "\x80\x81\x81\x81\x81\x81\x81\x81\x81\x81\x81\x81\x81\x81\x81\x81\x81\x81\x81\x81\x81\x81\x81\x81\x81\x81\x81\x81\x82";
 static const char *info_bottom = "\x85\x81\x81\x81\x81\x81\x81\x81\x81\x81\x81\x81\x81\x81\x81\x81\x81\x81\x81\x81\x81\x81\x81\x81\x81\x81\x81\x81\x84";
 
+// game UI related vars
+static uint32_t button_face_style = 0; 
+static const char button_selected = ' '; // what to show when blinking button
 // one screen width
 static const char* HELPTEXT_SPACER = "                                ";
 static char helptext_custom[1024];
@@ -618,7 +625,7 @@ static void printSysInfo()
 		sysinfo_timer = GetTimer(2000);
 		struct battery_data_t bat;
 		int hasbat = getBattery(0, &bat);
-		int n = is_menu_core() ? 10 : 5;
+		int n = is_menu_core() ? 11 : 5;
 
 		char str[40];
 		OsdWrite(n++, info_top, 0, 0);
@@ -814,6 +821,7 @@ void HandleUI(void)
 	static int has_fb_terminal = 0;
 	static unsigned long flash_timer = 0;
 	static int flash_state = 0;
+	static uint32_t jstatus = get_joypad_status(0);
 
 	static char	cp_MenuCancel;
 
@@ -2146,6 +2154,85 @@ void HandleUI(void)
 		}
 		break;
 
+	case MENU_JOYPAD_TEST:
+		helptext = 0;
+		menumask = 0b11;
+		menusub = 0;
+		flash_timer = 0;
+		flash_state = 0;
+		OsdSetTitle("Controller Test", 0);
+		for(uint32_t i=0; i<10; i++)
+			OsdWrite(i);
+		osd_joypad_draw(8, 0);
+		for(uint32_t i=11; i<17; i++)
+			OsdWrite(i);
+		menustate = MENU_JOYPAD_TEST1;
+		break;
+
+	case MENU_JOYPAD_TEST1:
+		memset(s, 0, sizeof(s));
+		OsdWrite(0);
+		OsdWrite(1);
+		OsdWrite(2, "        Buttons Style");
+		sprintf(s, "%s", osd_joypad_style_name(button_face_style) );
+		OsdWrite(3, s, menusub == 0, m);
+		jstatus = get_joypad_status(0);
+		sprintf(s, "     %d", jstatus);
+		OsdWrite(4, s);
+		if (!flash_timer || CheckTimer(flash_timer))
+		{
+			flash_timer = GetTimer(100);
+			if (flash_state)
+			{
+				osd_joypad_update(8, button_face_style, '*', SYS_BTN_UP);
+				osd_joypad_update(8, button_face_style, '*', SYS_BTN_LEFT);
+				osd_joypad_update(8, button_face_style, '*', SYS_BTN_RIGHT);
+				osd_joypad_update(8, button_face_style, '*', SYS_BTN_DOWN);
+				osd_joypad_update(8, button_face_style, '*', SYS_BTN_A);
+				osd_joypad_update(8, button_face_style, '*', SYS_BTN_B);
+				osd_joypad_update(8, button_face_style, '*', SYS_BTN_X);
+				osd_joypad_update(8, button_face_style, '*', SYS_BTN_Y);
+				osd_joypad_update(8, button_face_style, '*', SYS_BTN_L);
+				osd_joypad_update(8, button_face_style, '*', SYS_BTN_R);
+				osd_joypad_update(8, button_face_style, '*', SYS_BTN_SELECT);
+				osd_joypad_update(8, button_face_style, '*', SYS_BTN_START);
+				
+			}
+			else
+			{
+				osd_joypad_draw(8, button_face_style);
+			}
+			flash_state = !flash_state;
+		}
+		OsdWrite(15, STD_EXIT, menusub == 1, 0, OSD_ARROW_RIGHT);
+		parentstate = MENU_JOYPAD_TEST1;
+		menustate = MENU_JOYPAD_TEST2;
+		break;
+	
+	case MENU_JOYPAD_TEST2:
+		if (select || right) {
+			switch (menusub) {
+				case 0:
+					if(button_face_style==4)
+						button_face_style=0;
+					else
+						button_face_style++;
+					break;
+				case 1:
+					menustate = MENU_SYSTEM1;
+					menusub = 4;
+					break;
+			}
+		} else if (left) {
+			if (button_face_style==0)
+				button_face_style=4;
+			else 
+				button_face_style--;
+		} else {
+			menustate = MENU_JOYPAD_TEST1; //don't wait for up/down to switch UI
+		}
+		break;
+		
 	case MENU_JOYDIGMAP:
 		helptext = 0;
 		menumask = 1;
@@ -2255,28 +2342,12 @@ void HandleUI(void)
 					{
 						switch (get_map_button())
 						{
-							case SYS_BTN_L:      OsdWrite(10, "  \x86   \x88               \x86 R \x88  "); break;
-							case SYS_BTN_R:      OsdWrite(10, "  \x86 L \x88               \x86   \x88  "); break;
-							case SYS_BTN_UP:     OsdWrite(12, " \x83                     X   \x83");        break;
-							case SYS_BTN_X:      OsdWrite(12, " \x83   U                     \x83");        break;
-							case SYS_BTN_A:      OsdWrite(13, " \x83 L \x1b R  Sel Start  Y     \x83");     break;
-							case SYS_BTN_Y:      OsdWrite(13, " \x83 L \x1b R  Sel Start      A \x83");     break;
-							case SYS_BTN_LEFT:   OsdWrite(13, " \x83   \x1b R  Sel Start  Y   A \x83");     break;
-							case SYS_BTN_RIGHT:  OsdWrite(13, " \x83 L \x1b    Sel Start  Y   A \x83");     break;
-							case SYS_BTN_SELECT: OsdWrite(13, " \x83 L \x1b R      Start  Y   A \x83");     break;
-							case SYS_BTN_START:  OsdWrite(13, " \x83 L \x1b R  Sel        Y   A \x83");     break;
-							case SYS_BTN_DOWN:   OsdWrite(14, " \x83       \x86\x81\x81\x81\x81\x81\x81\x81\x81\x81\x88   B   \x83"); break;
-							case SYS_BTN_B:      OsdWrite(14, " \x83   D   \x86\x81\x81\x81\x81\x81\x81\x81\x81\x81\x88       \x83"); break;
+							osd_joypad_update(10, button_face_style, button_selected, get_map_button());
 						}
 					}
 					else
 					{
-						OsdWrite(10, "  \x86 L \x88               \x86 R \x88  ");
-						OsdWrite(11, " \x86\x81\x81\x81\x81\x81\x81\x81\x81\x81\x81\x81\x81\x81\x81\x81\x81\x81\x81\x81\x81\x81\x81\x81\x81\x81\x88");
-						OsdWrite(12, " \x83   U                 X   \x83");
-						OsdWrite(13, " \x83 L \x1b R  Sel Start  Y   A \x83");
-						OsdWrite(14, " \x83   D   \x86\x81\x81\x81\x81\x81\x81\x81\x81\x81\x88   B   \x83");
-						OsdWrite(15, " \x8b\x81\x81\x81\x81\x81\x81\x81\x8a         \x8b\x81\x81\x81\x81\x81\x81\x81\x8a");
+						osd_joypad_draw(10, button_face_style);
 					}
 					flash_state = !flash_state;
 				}
@@ -2285,13 +2356,7 @@ void HandleUI(void)
 			{
 				if(flash_timer)
 				{
-					//clear all gamepad gfx
-					OsdWrite(10);
-					OsdWrite(11);
-					OsdWrite(12);
-					OsdWrite(13);
-					OsdWrite(14);
-					OsdWrite(15);
+					osd_joypad_clear(10);
 					flash_timer = 0;
 				}
 
@@ -4064,7 +4129,7 @@ void HandleUI(void)
 			else sprintf(s, "   Available space: %llugb", avail / (1024 * 1024 * 1024));
 			OsdWrite(4, s, 0, 0);
 		}
-		menumask = 15;
+		menumask = 0b11111;
 		OsdWrite(2, "", 0, 0);
 		if (getStorage(0))
 		{
@@ -4088,8 +4153,8 @@ void HandleUI(void)
 		OsdWrite(7, " Remap keyboard            \x16", menusub == 1, 0);
 		OsdWrite(8, " Define joystick buttons   \x16", menusub == 2, 0);
 		OsdWrite(9, " Scripts                   \x16", menusub == 3, 0);
+		OsdWrite(10, " Joystick Test             \x16", menusub == 4, 0);
 		sysinfo_timer = 0;
-
 		menustate = MENU_SYSTEM2;
 
 	case MENU_SYSTEM2:
@@ -4158,6 +4223,10 @@ void HandleUI(void)
 						menusub = 0;
 					}
 				}
+				break;
+			case 4:
+				menustate = MENU_JOYPAD_TEST;
+				menusub = 0;
 				break;
 			}
 		}
@@ -4847,11 +4916,11 @@ void ErrorMessage(const char *message, unsigned char code)
 	OsdEnable(0); // do not disable KEYBOARD
 }
 
-void InfoMessage(const char *message, int timeout, const char *title)
+void InfoMessage(const char *message, int timeout)
 {
 	if (menustate != MENU_INFO)
 	{
-		OsdSetTitle(title, 0);
+		OsdSetTitle("Message", 0);
 		OsdEnable(0); // do not disable keyboard
 	}
 
@@ -4859,14 +4928,6 @@ void InfoMessage(const char *message, int timeout, const char *title)
 
 	menu_timer = GetTimer(timeout);
 	menustate = MENU_INFO;
-	HandleUI();
-	OsdUpdate();
-}
-
-void MenuHide()
-{
-	menustate = MENU_NONE1;
-	HandleUI();
 }
 
 void Info(const char *message, int timeout, int width, int height, int frame)
@@ -4901,3 +4962,6 @@ int menu_lightgun_cb(uint16_t type, uint16_t code, int value)
 	}
 	return 0;
 }
+
+
+

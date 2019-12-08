@@ -25,6 +25,7 @@
 #include "osd.h"
 #include "video.h"
 #include "joymapping.h"
+#include "osd_joypad.h"
 
 #define NUMDEV 30
 #define NUMPLAYERS 6
@@ -32,6 +33,7 @@
 
 char joy_bnames[NUMBUTTONS][32] = {};
 int  joy_bcount = 0;
+
 
 static int ev2amiga[] =
 {
@@ -2133,6 +2135,7 @@ static void input_cb(struct input_event *ev, struct input_absinfo *absinfo, int 
 					if (osd_event == 2) joy_digital(input[dev].num, 0, 0, 0, BTN_OSD);
 				}
 
+				
 				if (user_io_osd_is_visible() || video_fb_state())
 				{
 					if (ev->value <= 1)
@@ -2169,7 +2172,8 @@ static void input_cb(struct input_event *ev, struct input_absinfo *absinfo, int 
 							if (ev->code == (key + 1)) joy_digital(0, 1 << 2, 0, ev->value, 2);
 							if (ev->code == key) joy_digital(0, 1 << 3, 0, ev->value, 3);
 						}
-					}
+						
+					} 
 				}
 				else
 				{
@@ -2886,6 +2890,15 @@ int input_test(int getchar)
 										//keyboard, buttons
 									case EV_KEY:
 										printf("Input event: type=EV_KEY, code=%d(0x%x), value=%d, jnum=%d, ID:%04x:%04x:%02d\n", ev.code, ev.code, ev.value, input[dev].num, input[dev].vid, input[dev].pid, i);
+										//report status for central joystick state
+										if(is_menu_core() && user_io_osd_is_visible()) {
+											for(int i=0; i<16; i++) {
+												if ((ev.code == (input[dev].map[i]&0xFFFF0000)) || (ev.code == (input[dev].map[i]&0xFFFF))) {
+													printf("found matching map at idx %d", i); //TODO - remove debug
+													set_joypad_status(dev, i, ev.value);
+												}
+											}
+										}
 										break;
 
 									case EV_REL:
@@ -3255,3 +3268,4 @@ int input_state()
 {
 	return grabbed;
 }
+
