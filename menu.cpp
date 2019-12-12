@@ -4863,20 +4863,6 @@ void PrintDirectory(void)
 	}
 }
 
-void _strncpy(char* pStr1, const char* pStr2, size_t nCount)
-{
-	// customized strncpy() function to fill remaing destination string part with spaces
-
-	while (*pStr2 && nCount)
-	{
-		*pStr1++ = *pStr2++; // copy strings
-		nCount--;
-	}
-
-	while (nCount--)
-		*pStr1++ = ' '; // fill remaining space with spaces
-}
-
 static void set_text(const char *message, unsigned char code)
 {
 	char s[40];
@@ -4916,11 +4902,11 @@ void ErrorMessage(const char *message, unsigned char code)
 	OsdEnable(0); // do not disable KEYBOARD
 }
 
-void InfoMessage(const char *message, int timeout)
+void InfoMessage(const char *message, int timeout, const char *title)
 {
 	if (menustate != MENU_INFO)
 	{
-		OsdSetTitle("Message", 0);
+		OsdSetTitle(title, 0);
 		OsdEnable(0); // do not disable keyboard
 	}
 
@@ -4928,7 +4914,16 @@ void InfoMessage(const char *message, int timeout)
 
 	menu_timer = GetTimer(timeout);
 	menustate = MENU_INFO;
+	HandleUI();
+	OsdUpdate();
 }
+
+void MenuHide()
+{
+	menustate = MENU_NONE1;
+	HandleUI();
+}
+
 
 void Info(const char *message, int timeout, int width, int height, int frame)
 {

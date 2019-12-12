@@ -1595,7 +1595,7 @@ static void joy_digital(int jnum, uint32_t mask, uint32_t code, char press, int 
 
 		if (user_io_osd_is_visible() || (bnum == BTN_OSD))
 		{
-			memset(joy, 0, sizeof(joy));
+				memset(joy, 0, sizeof(joy));
 			struct input_event ev;
 			ev.type = EV_KEY;
 			ev.value = press;
@@ -2894,7 +2894,7 @@ int input_test(int getchar)
 										if(is_menu_core() && user_io_osd_is_visible()) {
 											for(int i=0; i<16; i++) {
 												if ((ev.code == (input[dev].map[i]&0xFFFF0000)) || (ev.code == (input[dev].map[i]&0xFFFF))) {
-													printf("found matching map at idx %d", i); //TODO - remove debug
+													printf("found matching map at idx %d\n", i); //TODO - remove debug
 													set_joypad_status(dev, i, ev.value);
 												}
 											}

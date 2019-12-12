@@ -30,6 +30,14 @@ const char *joypad_ascii[] = {	"  \x86 L \x88               \x86 R \x88  ",
 								" \x83   D   \x86\x81\x81\x81\x81\x81\x81\x81\x81\x81\x88   B   \x83",
 								" \x8b\x81\x81\x81\x81\x81\x81\x81\x8a         \x8b\x81\x81\x81\x81\x81\x81\x81\x8a"};
 
+const char *joypad_ascii_6btn[] = {
+								"  \x86\x81\x81\x81\x81\x88               \x86\x81\x81\x81\x81\x88  ",
+								" \x86\x8a        \x81\x81\x81\x81\x81\x81\x81\x81\x81      \x8b\x88",
+								" \x83   U               X Y Z \x83",
+								" \x83 L \x1b R     Start   A B C \x83",
+								" \x83   D       Sel           \x83",
+								" \x8b\x81\x81\x81\x81\x81\x81\x81\x81\x81\x81\x81\x81\x81\x81\x81\x81\x81\x81\x81\x81\x81\x81\x81\x81\x81\x8a"};
+
 const uint32_t GAMEPAD_UI_LINE_L_R    = 0;
 const uint32_t GAMEPAD_UI_LINE_U_X    = 2;
 const uint32_t GAMEPAD_UI_LINE_MIDDLE = 3;
@@ -48,15 +56,52 @@ const uint32_t GAMEPAD_UI_BTN_A     = GAMEPAD_UI_BTN_Y+4;
 const uint32_t GAMEPAD_UI_BTN_B     = GAMEPAD_UI_BTN_A-2;
 const uint32_t GAMEPAD_UI_BTN_X     = GAMEPAD_UI_BTN_B;
 
+const uint32_t GAMEPAD_UI_6BTN_SELECT= 10;
+const uint32_t GAMEPAD_UI_6BTN_START = GAMEPAD_UI_BTN_SELECT+4;
+const uint32_t GAMEPAD_UI_6BTN_L     = 4; 
+const uint32_t GAMEPAD_UI_6BTN_R     = 24; 
+const uint32_t GAMEPAD_UI_6BTN_Y     = 21; 
+const uint32_t GAMEPAD_UI_6BTN_A     = GAMEPAD_UI_BTN_Y+4; 
+const uint32_t GAMEPAD_UI_6BTN_B     = GAMEPAD_UI_BTN_A-2;
+const uint32_t GAMEPAD_UI_6BTN_X     = GAMEPAD_UI_BTN_B;
+
+
+
+
 // wrapper to return UI gamepad graphic
-const char *osd_joypad_raw_data(uint32_t line) {
+const char *osd_joypad_raw_data(uint32_t line, uint32_t button_style) {
 	if (line>5) line=5;
+	if (button_style>2)
+	   return joypad_ascii_6btn[line];
 	return joypad_ascii[line];
 }
 
 // returns image of gamepad with desired button label style
 void osd_joypad_line(uint32_t line, char *s, uint32_t button_style) {
-	strcpy(s, osd_joypad_raw_data(line));
+	strcpy(s, osd_joypad_raw_data(line, button_style));
+	if (button_style>2)
+		return; // ignore labels for now
+	switch(line) {
+		case GAMEPAD_UI_LINE_MIDDLE:
+			s[GAMEPAD_UI_BTN_A] = button_A_labels[button_style][0];
+			s[GAMEPAD_UI_BTN_Y] = button_Y_labels[button_style][0];
+			break;
+		case GAMEPAD_UI_LINE_L_R:
+			s[GAMEPAD_UI_BTN_L] = button_L_labels[button_style][0];
+			s[GAMEPAD_UI_BTN_R] = button_R_labels[button_style][0];
+			break;
+		case GAMEPAD_UI_LINE_D_B:
+			s[GAMEPAD_UI_BTN_B] = button_B_labels[button_style][0];
+			break;
+		case GAMEPAD_UI_LINE_U_X:
+			s[GAMEPAD_UI_BTN_X] = button_X_labels[button_style][0];
+			break;
+	}
+	return;
+}
+
+void osd_joypad_line_6btn(uint32_t line, char *s, uint32_t button_style) {
+	strcpy(s, osd_joypad_raw_data(line, button_style));
 	switch(line) {
 		case GAMEPAD_UI_LINE_MIDDLE:
 			s[GAMEPAD_UI_BTN_A] = button_A_labels[button_style][0];
