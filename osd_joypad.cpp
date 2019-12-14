@@ -139,8 +139,10 @@ void osd_joypad_draw(uint32_t osd_start_line, uint32_t osd_joypad_style) {
 }
 
 unsigned char is_pressed(uint32_t joy_status, uint32_t button_idx) {
-	if(!joy_status) return 0;
-	return (joy_status & ( 0b1 << button_idx ));
+	if(!joy_status) return 0;   // no need to check
+	if(button_idx>15) return 0; // out of range
+	uint16_t mask = 0b1 << button_idx;
+	return (joy_status & mask);
 }
 
 //draws one line in OSD from a single joypad status line (with all bits)

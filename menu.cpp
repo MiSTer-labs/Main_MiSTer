@@ -41,6 +41,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <libgen.h>
+#include <bitset>
 
 #include "file_io.h"
 #include "osd.h"
@@ -55,6 +56,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "bootcore.h"
 #include "cheats.h"
 #include "video.h"
+#include "stringutils.h"
 #include "joymapping.h"
 #include "osd_joypad.h"
 
@@ -2156,14 +2158,14 @@ void HandleUI(void)
 
 	case MENU_JOYPAD_TEST:
 		helptext = 0;
-		menumask = 0b11;
+		menumask = 0b1; // trick, we use 2 empty spots to select nothing
 		menusub = 0;
 		flash_timer = 0;
 		flash_state = 0;
 		OsdSetTitle("Controller Test", 0);
 		for(uint32_t i=0; i<10; i++)
 			OsdWrite(i);
-		osd_joypad_draw(8, 0);
+		osd_joypad_draw(6, 0);
 		for(uint32_t i=11; i<17; i++)
 			OsdWrite(i);
 		menustate = MENU_JOYPAD_TEST1;
@@ -2176,38 +2178,15 @@ void HandleUI(void)
 		OsdWrite(2, "        Buttons Style");
 		sprintf(s, "%s", osd_joypad_style_name(button_face_style) );
 		OsdWrite(3, s, menusub == 0, m);
+		OsdWrite(4);
+		OsdWrite(5);
+		osd_joypad_draw(6, button_face_style);
+		osd_joypad_update(6, button_face_style, '*', jstatus);
 		jstatus = get_joypad_status(0);
-		sprintf(s, "     %d", jstatus);
-		OsdWrite(4, s);
-		/*
-		if (!flash_timer || CheckTimer(flash_timer))
-		{
-			flash_timer = GetTimer(100);
-			if (flash_state)
-			{
-				osd_joypad_update(8, button_face_style, '*', SYS_BTN_UP);
-				osd_joypad_update(8, button_face_style, '*', SYS_BTN_LEFT);
-				osd_joypad_update(8, button_face_style, '*', SYS_BTN_RIGHT);
-				osd_joypad_update(8, button_face_style, '*', SYS_BTN_DOWN);
-				osd_joypad_update(8, button_face_style, '*', SYS_BTN_A);
-				osd_joypad_update(8, button_face_style, '*', SYS_BTN_B);
-				osd_joypad_update(8, button_face_style, '*', SYS_BTN_X);
-				osd_joypad_update(8, button_face_style, '*', SYS_BTN_Y);
-				osd_joypad_update(8, button_face_style, '*', SYS_BTN_L);
-				osd_joypad_update(8, button_face_style, '*', SYS_BTN_R);
-				osd_joypad_update(8, button_face_style, '*', SYS_BTN_SELECT);
-				osd_joypad_update(8, button_face_style, '*', SYS_BTN_START);
-				
-			}
-			else
-			{
-				osd_joypad_draw(8, button_face_style);
-			}
-			flash_state = !flash_state;
-		}*/
-		osd_joypad_draw(8, button_face_style);
-		osd_joypad_update(8, button_face_style, '*', jstatus);
-		OsdWrite(15, STD_EXIT, menusub == 1, 0, OSD_ARROW_RIGHT);
+		sprintf(s, "        %s", std::bitset<12>(jstatus).to_string().c_str());
+		OsdWrite(13, s);
+		OsdWrite(14);
+		OsdWrite(15, "      press MENU to exit"); 
 		parentstate = MENU_JOYPAD_TEST1;
 		menustate = MENU_JOYPAD_TEST2;
 		break;
@@ -2229,15 +2208,13 @@ void HandleUI(void)
 					break;
 				}
 				break;
-			case 1:
-				if(select) {
-					menustate = MENU_SYSTEM1;
-					menusub = 4;
-				} 
-				break;
 		}
-		if(!(select&&menusub==0))
-			menustate = MENU_JOYPAD_TEST1; //don't wait for up/down to switch UI		
+		if(menu) {
+			menustate = MENU_SYSTEM1;
+			menusub = 4;
+		} else {
+			menustate = MENU_JOYPAD_TEST1; //don't wait for up/down to switch UI
+		}
 		break;
 		
 	case MENU_JOYDIGMAP:
@@ -2347,10 +2324,8 @@ void HandleUI(void)
 					flash_timer = GetTimer(100);
 					if (flash_state)
 					{
-						switch (get_map_button())
-						{
-							osd_joypad_update(10, button_face_style, button_selected, get_map_button());
-						}
+						uint16_t mask = 0b1 << get_map_button();
+						osd_joypad_update(10, button_face_style, button_selected, mask);;
 					}
 					else
 					{
