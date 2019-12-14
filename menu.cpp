@@ -2210,27 +2210,31 @@ void HandleUI(void)
 		break;
 	
 	case MENU_JOYPAD_TEST2:
-		if (select || right) {
-			switch (menusub) {
-				case 0:
+		switch (menusub) {
+			case 0:
+				if(left) {
+					if (button_face_style==0)
+						button_face_style=4;
+					else 
+						button_face_style--;
+				}
+				if(right) {
 					if(button_face_style==4)
 						button_face_style=0;
 					else
 						button_face_style++;
 					break;
-				case 1:
+				}
+				break;
+			case 1:
+				if(select) {
 					menustate = MENU_SYSTEM1;
 					menusub = 4;
-					break;
-			}
-		} else if (left) {
-			if (button_face_style==0)
-				button_face_style=4;
-			else 
-				button_face_style--;
-		} else {
-			menustate = MENU_JOYPAD_TEST1; //don't wait for up/down to switch UI
+				} 
+				break;
 		}
+		if(!(select&&menusub==0))
+			menustate = MENU_JOYPAD_TEST1; //don't wait for up/down to switch UI		
 		break;
 		
 	case MENU_JOYDIGMAP:
