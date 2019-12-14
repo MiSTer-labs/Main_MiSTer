@@ -138,7 +138,7 @@ void osd_joypad_draw(uint32_t osd_start_line, uint32_t osd_joypad_style) {
 	}
 }
 
-char is_pressed(uint32_t joy_status, uint32_t button_idx) {
+unsigned char is_pressed(uint32_t joy_status, uint32_t button_idx) {
 	if(!joy_status) return 0;
 	return (joy_status & ( 0b1 << button_idx ));
 }
@@ -156,35 +156,35 @@ void osd_joypad_update(uint32_t osd_start_line, uint32_t osd_joypad_style, char 
 	if (osd_joypad_style>2) {
 		// 6 face button layout
 		if (is_pressed(joy_status, SYS_BTN_L))     osd_joypad_line_update(s2, GAMEPAD_UI_6BTN_L,     alt_char);
-		if (joy_status & SYS_BTN_R)      osd_joypad_line_update(s2, GAMEPAD_UI_6BTN_R,     alt_char);
-		if (joy_status & SYS_BTN_UP)     osd_joypad_line_update(s2, GAMEPAD_UI_BTN_UP,     alt_char);
-		if (joy_status & SYS_BTN_X)      osd_joypad_line_update(s2, GAMEPAD_UI_6BTN_X,     alt_char);
-		if (joy_status & SYS_BTN_A)      osd_joypad_line_update(s3, GAMEPAD_UI_6BTN_A,     alt_char);
-		if (joy_status & SYS_BTN_Y)      osd_joypad_line_update(s3, GAMEPAD_UI_6BTN_Y,     alt_char);
-		if (joy_status & SYS_BTN_LEFT)   osd_joypad_line_update(s3, GAMEPAD_UI_BTN_LEFT,   alt_char);
-		if (joy_status & SYS_BTN_RIGHT)  osd_joypad_line_update(s3, GAMEPAD_UI_BTN_RIGHT,  alt_char);
-		if (joy_status & SYS_BTN_START)  osd_joypad_line_update(s3, GAMEPAD_UI_6BTN_START, alt_char, 4);
-		if (joy_status & SYS_BTN_B)      osd_joypad_line_update(s3, GAMEPAD_UI_6BTN_B,     alt_char);
-		if (joy_status & SYS_BTN_DOWN)   osd_joypad_line_update(s4, GAMEPAD_UI_BTN_DOWN,   alt_char);
-		if (joy_status & SYS_BTN_SELECT) osd_joypad_line_update(s4, GAMEPAD_UI_6BTN_SELECT,alt_char, 2);
+		if (is_pressed(joy_status, SYS_BTN_R))     osd_joypad_line_update(s2, GAMEPAD_UI_6BTN_R,     alt_char);
+		if (is_pressed(joy_status, SYS_BTN_UP))    osd_joypad_line_update(s2, GAMEPAD_UI_BTN_UP,     alt_char);
+		if (is_pressed(joy_status, SYS_BTN_X))     osd_joypad_line_update(s2, GAMEPAD_UI_6BTN_X,     alt_char);
+		if (is_pressed(joy_status, SYS_BTN_A))     osd_joypad_line_update(s3, GAMEPAD_UI_6BTN_A,     alt_char);
+		if (is_pressed(joy_status, SYS_BTN_Y))     osd_joypad_line_update(s3, GAMEPAD_UI_6BTN_Y,     alt_char);
+		if (is_pressed(joy_status, SYS_BTN_LEFT))  osd_joypad_line_update(s3, GAMEPAD_UI_BTN_LEFT,   alt_char);
+		if (is_pressed(joy_status, SYS_BTN_RIGHT)) osd_joypad_line_update(s3, GAMEPAD_UI_BTN_RIGHT,  alt_char);
+		if (is_pressed(joy_status, SYS_BTN_START)) osd_joypad_line_update(s3, GAMEPAD_UI_6BTN_START, alt_char, 4);
+		if (is_pressed(joy_status, SYS_BTN_B))     osd_joypad_line_update(s3, GAMEPAD_UI_6BTN_B,     alt_char);
+		if (is_pressed(joy_status, SYS_BTN_DOWN))  osd_joypad_line_update(s4, GAMEPAD_UI_BTN_DOWN,   alt_char);
+		if (is_pressed(joy_status, SYS_BTN_SELECT))osd_joypad_line_update(s4, GAMEPAD_UI_6BTN_SELECT,alt_char, 2);
 		OsdWrite(osd_start_line+GAMEPAD_UI_LINE_L_R,    s1);
 		OsdWrite(osd_start_line+GAMEPAD_UI_LINE_U_X,    s2);
 		OsdWrite(osd_start_line+GAMEPAD_UI_LINE_MIDDLE, s3);
 		OsdWrite(osd_start_line+GAMEPAD_UI_LINE_D_B,    s4);
 	} else {
 		// 4 face button layout
-		if (joy_status & SYS_BTN_L)      osd_joypad_line_update(s1, GAMEPAD_UI_BTN_L,     alt_char);
-		if (joy_status & SYS_BTN_R)      osd_joypad_line_update(s1, GAMEPAD_UI_BTN_R,     alt_char);
-		if (joy_status & SYS_BTN_UP)     osd_joypad_line_update(s2, GAMEPAD_UI_BTN_UP,    alt_char);
-		if (joy_status & SYS_BTN_X)      osd_joypad_line_update(s2, GAMEPAD_UI_BTN_X,     alt_char);
-		if (joy_status & SYS_BTN_A)      osd_joypad_line_update(s3, GAMEPAD_UI_BTN_A,     alt_char);
-		if (joy_status & SYS_BTN_Y)      osd_joypad_line_update(s3, GAMEPAD_UI_BTN_Y,     alt_char);
-		if (joy_status & SYS_BTN_LEFT)   osd_joypad_line_update(s3, GAMEPAD_UI_BTN_LEFT,  alt_char);
-		if (joy_status & SYS_BTN_RIGHT)  osd_joypad_line_update(s3, GAMEPAD_UI_BTN_RIGHT, alt_char);
-		if (joy_status & SYS_BTN_SELECT) osd_joypad_line_update(s3, GAMEPAD_UI_BTN_SELECT,alt_char, 2);
-		if (joy_status & SYS_BTN_START)  osd_joypad_line_update(s3, GAMEPAD_UI_BTN_START, alt_char, 4);
-		if (joy_status & SYS_BTN_B)      osd_joypad_line_update(s4, GAMEPAD_UI_BTN_B,     alt_char);
-		if (joy_status & SYS_BTN_DOWN)   osd_joypad_line_update(s4, GAMEPAD_UI_BTN_DOWN,  alt_char);
+		if (is_pressed(joy_status, SYS_BTN_L))      osd_joypad_line_update(s1, GAMEPAD_UI_BTN_L,     alt_char);
+		if (is_pressed(joy_status, SYS_BTN_R))      osd_joypad_line_update(s1, GAMEPAD_UI_BTN_R,     alt_char);
+		if (is_pressed(joy_status, SYS_BTN_UP))     osd_joypad_line_update(s2, GAMEPAD_UI_BTN_UP,    alt_char);
+		if (is_pressed(joy_status, SYS_BTN_X))      osd_joypad_line_update(s2, GAMEPAD_UI_BTN_X,     alt_char);
+		if (is_pressed(joy_status, SYS_BTN_A))      osd_joypad_line_update(s3, GAMEPAD_UI_BTN_A,     alt_char);
+		if (is_pressed(joy_status, SYS_BTN_Y))      osd_joypad_line_update(s3, GAMEPAD_UI_BTN_Y,     alt_char);
+		if (is_pressed(joy_status, SYS_BTN_LEFT))   osd_joypad_line_update(s3, GAMEPAD_UI_BTN_LEFT,  alt_char);
+		if (is_pressed(joy_status, SYS_BTN_RIGHT))  osd_joypad_line_update(s3, GAMEPAD_UI_BTN_RIGHT, alt_char);
+		if (is_pressed(joy_status, SYS_BTN_SELECT)) osd_joypad_line_update(s3, GAMEPAD_UI_BTN_SELECT,alt_char, 2);
+		if (is_pressed(joy_status, SYS_BTN_START))  osd_joypad_line_update(s3, GAMEPAD_UI_BTN_START, alt_char, 4);
+		if (is_pressed(joy_status, SYS_BTN_B))      osd_joypad_line_update(s4, GAMEPAD_UI_BTN_B,     alt_char);
+		if (is_pressed(joy_status, SYS_BTN_DOWN))   osd_joypad_line_update(s4, GAMEPAD_UI_BTN_DOWN,  alt_char);
 		OsdWrite(osd_start_line+GAMEPAD_UI_LINE_L_R,    s1);
 		OsdWrite(osd_start_line+GAMEPAD_UI_LINE_U_X,    s2);
 		OsdWrite(osd_start_line+GAMEPAD_UI_LINE_MIDDLE, s3);

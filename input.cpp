@@ -2892,7 +2892,7 @@ int input_test(int getchar)
 										printf("Input event: type=EV_KEY, code=%d(0x%x), value=%d, jnum=%d, ID:%04x:%04x:%02d\n", ev.code, ev.code, ev.value, input[dev].num, input[dev].vid, input[dev].pid, i);
 										//report status for central joystick state
 										if(is_menu_core() && user_io_osd_is_visible()) {
-											for(int i=0; i<16; i++) {
+											for(int i=SYS_BTN_RIGHT; i<=SYS_BTN_START; i++) {
 												if ((ev.code == (input[dev].map[i]&0xFFFF0000)) || (ev.code == (input[dev].map[i]&0xFFFF))) {
 													printf("found matching map at idx %d\n", i); //TODO - remove debug
 													set_joypad_status(dev, i, ev.value);
@@ -3017,6 +3017,16 @@ int input_test(int getchar)
 											ev.value = 1;
 											ev.code = ecode + axis_edge;
 											input_cb(&ev, pai, i);
+										}
+										
+										//report status for central joystick state
+										if(is_menu_core() && user_io_osd_is_visible()) {
+											for(int i=SYS_BTN_RIGHT; i<=SYS_BTN_START; i++) {
+												if ((ev.code == (input[dev].map[i]&0xFFFF0000)) || (ev.code == (input[dev].map[i]&0xFFFF))) {
+													printf("found matching map at idx %d\n", i); //TODO - remove debug
+													set_joypad_status(dev, i, ev.value);
+												}
+											}
 										}
 									}
 

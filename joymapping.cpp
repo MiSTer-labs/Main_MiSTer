@@ -246,12 +246,14 @@ void map_joystick(uint32_t *map, uint32_t *mmap)
 
 // status reporting from outside functions
 extern uint32_t set_joypad_status(uint32_t dev, uint32_t index, uint32_t value) {
+	// ignore invalid output
+	if (dev > 4) return joy_status[0];
 	if (index > 32) return joy_status[dev];
-	if (dev > 4) dev = 0;
+	// switch status
 	if (value)
-		joy_status[dev] |= (0x1 << index);
+		joy_status[dev] |= (0b1 << index);
 	else
-		joy_status[dev] &= ~(0x1 << index);
+		joy_status[dev] &= ~(0b1 << index);
 	printf("set joy status: %s\n", std::bitset<32>(joy_status[dev]).to_string().c_str());
 	return joy_status[dev];
 }
