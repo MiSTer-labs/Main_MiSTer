@@ -2179,6 +2179,7 @@ void HandleUI(void)
 		jstatus = get_joypad_status(0);
 		sprintf(s, "     %d", jstatus);
 		OsdWrite(4, s);
+		/*
 		if (!flash_timer || CheckTimer(flash_timer))
 		{
 			flash_timer = GetTimer(100);
@@ -2203,7 +2204,9 @@ void HandleUI(void)
 				osd_joypad_draw(8, button_face_style);
 			}
 			flash_state = !flash_state;
-		}
+		}*/
+		osd_joypad_draw(8, button_face_style);
+		osd_joypad_update(8, button_face_style, '*', jstatus);
 		OsdWrite(15, STD_EXIT, menusub == 1, 0, OSD_ARROW_RIGHT);
 		parentstate = MENU_JOYPAD_TEST1;
 		menustate = MENU_JOYPAD_TEST2;
