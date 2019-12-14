@@ -2158,7 +2158,7 @@ void HandleUI(void)
 
 	case MENU_JOYPAD_TEST:
 		helptext = 0;
-		menumask = 0b1; // trick, we use 2 empty spots to select nothing
+		menumask = 0b11;
 		menusub = 0;
 		flash_timer = 0;
 		flash_state = 0;
@@ -2186,7 +2186,7 @@ void HandleUI(void)
 		sprintf(s, "        %s", std::bitset<12>(jstatus).to_string().c_str());
 		OsdWrite(13, s);
 		OsdWrite(14);
-		OsdWrite(15, "      press MENU to exit"); 
+		OsdWrite(15, STD_EXIT, menusub == 1, m); 
 		parentstate = MENU_JOYPAD_TEST1;
 		menustate = MENU_JOYPAD_TEST2;
 		break;
@@ -2208,13 +2208,15 @@ void HandleUI(void)
 					break;
 				}
 				break;
+			case 1:
+				if(select) {
+					menustate = MENU_SYSTEM1;
+					menusub = 4;
+					break;
+				}
 		}
-		if(menu) {
-			menustate = MENU_SYSTEM1;
-			menusub = 4;
-		} else {
+		if(!select) 
 			menustate = MENU_JOYPAD_TEST1; //don't wait for up/down to switch UI
-		}
 		break;
 		
 	case MENU_JOYDIGMAP:
@@ -3867,7 +3869,7 @@ void HandleUI(void)
 
 	case MENU_SETTINGS_HARDFILE2:
 		if (select)
-		{
+		{    
 			if (menusub == 0)
 			{
 				minimig_config.enable_ide = (minimig_config.enable_ide == 0);

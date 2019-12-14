@@ -4,6 +4,7 @@ This file contains functions to draw a controller joypad into the OSD
 
 #include <inttypes.h>
 #include <string.h>
+#include <bitset>
 
 #include "osd.h"
 #include "input.h"
@@ -141,7 +142,8 @@ void osd_joypad_draw(uint32_t osd_start_line, uint32_t osd_joypad_style) {
 unsigned char is_pressed(uint32_t joy_status, uint32_t button_idx) {
 	if(!joy_status) return 0;   // no need to check
 	if(button_idx>15) return 0; // out of range
-	uint16_t mask = 0b1 << button_idx;
+	uint32_t mask = 0b1 << button_idx;
+	//printf("mask = %s", std::bitset<32>(mask).to_string().c_str());
 	return (joy_status & mask);
 }
 

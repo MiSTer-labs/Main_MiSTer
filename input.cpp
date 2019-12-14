@@ -2894,7 +2894,7 @@ int input_test(int getchar)
 										if(is_menu_core() && user_io_osd_is_visible()) {
 											for(int i=SYS_BTN_RIGHT; i<=SYS_BTN_START; i++) {
 												if ((ev.code == (input[dev].map[i]&0xFFFF0000)) || (ev.code == (input[dev].map[i]&0xFFFF))) {
-													printf("found matching map at idx %d\n", i); //TODO - remove debug
+													//printf("found matching map at idx %d\n", i);
 													set_joypad_status(dev, i, ev.value);
 												}
 											}
@@ -3023,7 +3023,7 @@ int input_test(int getchar)
 										if(is_menu_core() && user_io_osd_is_visible()) {
 											for(int i=SYS_BTN_RIGHT; i<=SYS_BTN_START; i++) {
 												if ((ev.code == (input[dev].map[i]&0xFFFF0000)) || (ev.code == (input[dev].map[i]&0xFFFF))) {
-													printf("found matching map at idx %d\n", i); //TODO - remove debug
+													//printf("found matching map at idx %d\n", i);
 													set_joypad_status(dev, i, ev.value);
 												}
 											}
