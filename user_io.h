@@ -98,6 +98,7 @@
 #define UIO_MM2_HDD     0xF8 //0x54
 #define UIO_MM2_JOY     0xF9 //0x64
 
+// used in OSD controls
 #define JOY_RIGHT       0x01
 #define JOY_LEFT        0x02
 #define JOY_DOWN        0x04
@@ -108,20 +109,6 @@
 #define JOY_BTN3        0x40
 #define JOY_BTN4        0x80
 #define JOY_MOVE        (JOY_RIGHT|JOY_LEFT|JOY_UP|JOY_DOWN)
-
-// virtual gamepad buttons
-#define JOY_A      JOY_BTN1
-#define JOY_B      JOY_BTN2
-#define JOY_SELECT JOY_BTN3
-#define JOY_START  JOY_BTN4
-#define JOY_X      0x100
-#define JOY_Y      0x200
-#define JOY_L      0x400
-#define JOY_R      0x800
-#define JOY_L2     0x1000
-#define JOY_R2     0x2000
-#define JOY_L3     0x4000
-#define JOY_R3     0x8000
 
 // keyboard LEDs control
 #define KBD_LED_CAPS_CONTROL  0x01
