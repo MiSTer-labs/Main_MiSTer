@@ -2163,23 +2163,40 @@ void HandleUI(void)
 		helptext = 0;
 		menumask = 0b1111;
 		OsdSetTitle("Input Settings", 0);
-		OsdWrite(1);
-		osd_joypad_draw(2, button_face_style);
-		OsdWrite(8,  " Define controller         \x16", menusub == 1, 0);
-		OsdWrite(9,  " Controller Test           \x16", menusub == 2, 0);
-		OsdWrite(10, " Navigation: A=OK, B=Back  \x16", menusub == 3, 0);
-		OsdWrite(15, STD_EXIT, menusub==4);
+		OsdWrite(0);	
+		osd_joypad_draw(1, 0); // always show default layout here, for consistency with 3rd option
+		OsdWrite(7);
+		OsdWrite(8,   "      Controller Options      ");
+		OsdWrite(9);
+		OsdWrite(10,  " Controller Test           \x16", menusub == 0, 0);
+		OsdWrite(11,  " Menu navigation:   A = OK \x16", menusub == 1, 0);
+		OsdWrite(12,  " Define controller         \x16", menusub == 2, 0);
+		OsdWrite(13);
+		OsdWrite(14);
+		OsdWrite(15, STD_EXIT, menusub==3, m);
+		parentstate = MENU_INPUT_SETTINGS;
 		menustate = MENU_INPUT_SETTINGS1;
 		break;
 		
 	case MENU_INPUT_SETTINGS1:
-		if(select) {
-			switch(menusub) {
+		if (menu) {
+			menustate = MENU_SYSTEM1;
+			menusub = 2;
+			break;
+		}
+		else if(select) {
+			switch (menusub) {
 				case 0:
+					menustate = MENU_JOYPAD_TEST;
+					menusub = 0;
+					break;
+				case 1:
+					break;
+				case 2:
 					// launch controller mapping
 					strcpy(joy_bnames[SYS_BTN_A - DPAD_NAMES], "A");
 					strcpy(joy_bnames[SYS_BTN_B - DPAD_NAMES], "B");
-					strcpy(joy_bnames[SYS_BTN_X - DPAD_NAMES], "X (Backspace)");
+					strcpy(joy_bnames[SYS_BTN_X - DPAD_NAMES], "X");
 					strcpy(joy_bnames[SYS_BTN_Y - DPAD_NAMES], "Y");
 					strcpy(joy_bnames[SYS_BTN_L - DPAD_NAMES], "L");
 					strcpy(joy_bnames[SYS_BTN_R - DPAD_NAMES], "R");
@@ -2195,19 +2212,17 @@ void HandleUI(void)
 					strcpy(joy_bnames[SYS_MS_BTN_EMU - DPAD_NAMES], "Mouse Emu / Sniper");
 					joy_bcount = 16+1; //buttons + OSD/KTGL button
 					start_map_setting(joy_bcount + 6); // + dpad + Analog X/Y
+					parentstate = MENU_JOYDIGMAP;
 					menustate = MENU_JOYDIGMAP;
 					menusub = 0;
 					break;
-				case 1:
-					menustate = MENU_JOYPAD_TEST;
-					menusub = 0;
-					break;
-				case 2:
+				case 3:
 					menustate = MENU_SYSTEM1;
 					menusub = 2;
 					break;
 			}
 		}
+		menustate = MENU_INPUT_SETTINGS;
 		break;
 
 	case MENU_JOYPAD_TEST:
@@ -2434,7 +2449,7 @@ void HandleUI(void)
 				finish_map_setting(menu);
 				if (is_menu_core())
 				{
-					menustate = MENU_SYSTEM1;
+					menustate = MENU_INPUT_SETTINGS1;
 					menusub = 2;
 				}
 				else
