@@ -15,6 +15,7 @@
 #include <linux/uinput.h>
 #include <sys/time.h>
 #include <sys/types.h>
+#include <bitset>
 
 #include "input.h"
 #include "user_io.h"
@@ -38,7 +39,8 @@
 
 char joy_bnames[NUMBUTTONS][32] = {};
 int  joy_bcount = 0;
-
+uint32_t osd_ok     = 0x10;
+uint32_t osd_cancel = 0x20;
 
 static int ev2amiga[] =
 {
@@ -1013,8 +1015,8 @@ typedef struct
 
 	uint8_t  osd_combo;
 	
-	uint16_t osd_ok;
-	uint16_t osd_cancel;
+	/*uint16_t osd_ok;
+	uint16_t osd_cancel;*/
 	uint16_t osd_backspace;
 	
 	uint8_t  has_mmap;
@@ -1615,10 +1617,13 @@ static void joy_digital(int jnum, uint32_t mask, uint32_t code, char press, int 
 			struct input_event ev;
 			ev.type = EV_KEY;
 			ev.value = press;
-			if (!input[num].osd_ok)        input[num].osd_ok = JOY_BTN1;
-			if (!input[num].osd_cancel)    input[num].osd_ok = JOY_BTN2;
-			if (!input[num].osd_backspace) input[num].osd_ok = JOY_BTN3;
-			uint32_t osd_action = ( input[num].osd_ok | input[num].osd_cancel | input[num].osd_backspace);
+			//if (!input[num].osd_ok) {
+			//	printf("Defaulting osd OK to BTN1\n");
+			//	input[num].osd_ok = JOY_BTN1;
+			//}
+			//if (!input[num].osd_cancel)    input[num].osd_cancel = JOY_BTN2;
+			if (!input[num].osd_backspace) input[num].osd_backspace = JOY_BTN3;
+			uint32_t osd_action = ( osd_ok | osd_cancel | input[num].osd_backspace);
 			//priority to joystick movement
 			if(mask & JOY_MOVE) {
 				switch (mask) {
@@ -1638,10 +1643,11 @@ static void joy_digital(int jnum, uint32_t mask, uint32_t code, char press, int 
 			} else {
 				// then check button presses
 				if(mask & osd_action) {
-					if (mask == input[num].osd_ok) {
+					if (mask == osd_ok) {
+						printf("OSD ok: %s\n", std::bitset<16>(mask).to_string().c_str());
 						ev.code = KEY_ENTER;
 					} else {
-						if(mask == input[num].osd_cancel) {
+						if(mask == osd_cancel) {
 							ev.code = KEY_ESC;
 						} else {
 							ev.code = KEY_BACKSPACE;
@@ -3303,12 +3309,18 @@ int input_state()
 	return grabbed;
 }
 
-void set_joy_ok(uint32_t mask, int dev) 
+void set_joy_ok(uint32_t button_idx) 
 {
-	input[dev].osd_ok = mask;
+	if(button_idx > 16) button_idx=16;
+	uint16_t mask = 0b1 << button_idx;
+	printf("OSD OK set to    : %s\n", std::bitset<16>(mask).to_string().c_str());
+	osd_ok = mask;	
 }
-void set_joy_cancel(uint32_t mask, int dev) 
+void set_joy_cancel(uint32_t button_idx) 
 {
-	input[dev].osd_cancel = mask;
+	if(button_idx > 16) button_idx=16;
+	uint16_t mask = 0b1 << button_idx;
+	printf("OSD Cancel set to: %s\n", std::bitset<16>(mask).to_string().c_str());
+	osd_cancel = mask;	
 }
 

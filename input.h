@@ -81,8 +81,6 @@ void finish_map_setting(int dismiss);
 uint16_t get_map_vid();
 uint16_t get_map_pid();
 int has_default_map();
-void set_joy_ok(uint32_t mask, int dev=0);
-void set_joy_cancel(uint32_t mask, int dev=0);
 
 uint32_t get_key_mod();
 uint32_t get_ps2_code(uint16_t key);
@@ -99,5 +97,11 @@ void input_uinp_destroy();
 
 extern char joy_bnames[NUMBUTTONS][32];
 extern int  joy_bcount;
+extern uint32_t osd_ok;
+extern uint32_t osd_cancel;
+
+extern void set_joy_ok(uint32_t button_idx);
+extern void set_joy_cancel(uint32_t button_idx);
+
 
 #endif

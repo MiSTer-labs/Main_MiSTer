@@ -200,7 +200,7 @@ const char *config_stereo_msg[] = { "0%", "25%", "50%", "100%" };
 const char *config_uart_msg[] = { "     None", "      PPP", "  Console", "     MIDI" };
 const char *config_scaler_msg[] = { "Internal","Custom" };
 const char *config_gamma_msg[] = { "Off","On" };
-const char *config_navigation_msg[] = { " Menu navigation    A = OK \x16", " Menu navigation    B = OK \x16"};
+const char *config_navigation_msg[] = { "\x10  Menu navigation: Classic \x16", "\x10  Menu navigation: Modern  \x16"};
 
 #define DPAD_NAMES 4
 #define DPAD_BUTTON_NAMES 12  //DPAD_NAMES + 6 buttons + start/select
@@ -2175,12 +2175,12 @@ void HandleUI(void)
 		menumask = 0b1111;
 		OsdSetTitle("Input Settings", 0);
 		OsdWrite(0);	
-		osd_joypad_draw(1, 0); // always show default layout here, for consistency with 3rd option
+		osd_joypad_draw(1, button_face_style);
 		OsdWrite(7);
 		OsdWrite(8,   "      Controller Options      ");
 		OsdWrite(9);
-		OsdWrite(10,  " Controller Test           \x16", menusub == 0, 0);
-		OsdWrite(11,  config_navigation_msg[menu_navigation_style], menusub == 1, 0);
+		OsdWrite(10,  config_navigation_msg[menu_navigation_style], menusub == 0, 0);
+		OsdWrite(11,  " Controller Test/Style     \x16", menusub == 1, 0);
 		OsdWrite(12,  " Define controller         \x16", menusub == 2, 0);
 		OsdWrite(13);
 		OsdWrite(14);
@@ -2197,21 +2197,9 @@ void HandleUI(void)
 		}
 		else if(select) {
 			switch (menusub) {
-				case 0:
+				case 1:
 					menustate = MENU_JOYPAD_TEST;
 					menusub = 0;
-					break;
-				case 1:
-					menu_navigation_style ++;
-					if(menu_navigation_style>1)
-						menu_navigation_style = 0;
-					if(menu_navigation_style) {
-						set_joy_ok(SYS_BTN_B);
-						set_joy_cancel(SYS_BTN_A);
-					} else {
-						set_joy_ok(SYS_BTN_A);
-						set_joy_cancel(SYS_BTN_B);
-					}
 					break;
 				case 2:
 					// launch controller mapping
@@ -2241,6 +2229,17 @@ void HandleUI(void)
 					menusub = 2;
 					break;
 			}
+		} else if ( (right|left) && menusub==0) {
+				if(menu_navigation_style) menu_navigation_style = 0;
+				else menu_navigation_style = 1;
+				if(menu_navigation_style) {
+					set_joy_ok(SYS_BTN_B);
+					set_joy_cancel(SYS_BTN_A);
+				} else {
+					set_joy_ok(SYS_BTN_A);
+					set_joy_cancel(SYS_BTN_B);
+				}
+				menustate = MENU_INPUT_SETTINGS1; // update screen immediately
 		}
 		break;
 
@@ -2296,8 +2295,8 @@ void HandleUI(void)
 				break;
 			case 1:
 				if(select) {
-					menustate = MENU_SYSTEM1;
-					menusub = 4;
+					menustate = MENU_INPUT_SETTINGS;
+					menusub = 1;
 					break;
 				}
 		}

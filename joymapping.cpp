@@ -253,7 +253,7 @@ uint32_t set_joypad_status(uint32_t dev, uint32_t index, uint32_t value) {
 		joy_status[dev] |= (0b1 << index);
 	else
 		joy_status[dev] &= ~(0b1 << index);
-	printf("set joy status: %s\n", std::bitset<32>(joy_status[dev]).to_string().c_str());
+	//printf("set joy status: %s\n", std::bitset<32>(joy_status[dev]).to_string().c_str());
 	return joy_status[dev];
 }
 
