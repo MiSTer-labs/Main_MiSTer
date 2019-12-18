@@ -12,6 +12,8 @@
 #include <sys/mman.h>
 
 #include "lib/lodepng/lodepng.h"
+#include "md5.h"
+
 #include "hardware.h"
 #include "osd.h"
 #include "user_io.h"
@@ -691,16 +693,25 @@ int user_io_is_dualsdr()
 	return dual_sdr;
 }
 
-void user_io_init(const char *path)
+int user_io_get_width()
+{
+	return fio_size;
+}
+
+void user_io_init(const char *path, const char *xml)
 {
 	char *name;
 	static char mainpath[512];
 	core_name[0] = 0;
 	disable_osd = 0;
 
+	// we need to set the directory to where the XML file (MRA) is
+	// not the RBF. The RBF will be in arcade, which the user shouldn't
+	// browse
+	strcpy(core_path, xml ? xml : path);
+
 	memset(sd_image, 0, sizeof(sd_image));
 
-	strcpy(core_path, path);
 	core_type = (fpga_core_id() & 0xFF);
 	fio_size = fpga_get_fio_size();
 	io_ver = fpga_get_io_version();
@@ -813,7 +824,11 @@ void user_io_init(const char *path)
 			}
 			else
 			{
-				if (is_minimig())
+				if (xml)
+				{
+					arcade_send_rom(xml);
+				}
+				else if (is_minimig())
 				{
 					puts("Identified Minimig V2 core");
 					BootInit();
@@ -1185,6 +1200,14 @@ void user_io_set_index(unsigned char index)
 	DisableFpga();
 }
 
+void user_io_set_download(unsigned char enable)
+{
+	EnableFpga();
+	spi8(UIO_FILE_TX);
+	spi8(enable ? 0xff : 0x00);
+	DisableFpga();
+}
+
 int user_io_file_mount(char *name, unsigned char index, char pre)
 {
 	int writable = 0;
@@ -1530,21 +1553,9 @@ static void send_pcolchr(const char* name, unsigned char index, int type)
 
 		user_io_set_index(index);
 
-		EnableFpga();
-		spi8(UIO_FILE_TX);
-		spi8(0xff);
-		DisableFpga();
-
-		EnableFpga();
-		spi8(UIO_FILE_TX_DAT);
-		spi_write(col_attr, type ? 1024 : 1025, fio_size);
-		DisableFpga();
-
-		// signal end of transmission
-		EnableFpga();
-		spi8(UIO_FILE_TX);
-		spi8(0x00);
-		DisableFpga();
+		user_io_set_download(1);
+		user_io_file_tx_write(col_attr, type ? 1024 : 1025);
+		user_io_set_download(0);
 	}
 }
 
@@ -1603,6 +1614,14 @@ static void tx_progress(const char* name, unsigned int progress)
 	InfoMessage(progress_buf, 2000, "Loading");
 }
 
+void user_io_file_tx_write(const uint8_t *addr, uint16_t len)
+{
+	EnableFpga();
+	spi8(UIO_FILE_TX_DAT);
+	spi_write(addr, len, fio_size);
+	DisableFpga();
+}
+
 int user_io_file_tx(const char* name, unsigned char index, char opensave, char mute, char composite)
 {
 	fileTYPE f = {};
@@ -1638,20 +1657,14 @@ int user_io_file_tx(const char* name, unsigned char index, char opensave, char m
 	DisableFpga();
 
 	// prepare transmission of new file
-	EnableFpga();
-	spi8(UIO_FILE_TX);
-	spi8(0xff);
-	DisableFpga();
+	user_io_set_download(1);
 
 	if (is_snes_core() && bytes2send)
 	{
 		printf("Load SNES ROM.\n");
 		uint8_t* buf = snes_get_header(&f);
 		hexdump(buf, 16, 0);
-		EnableFpga();
-		spi8(UIO_FILE_TX_DAT);
-		spi_write(buf, 512, fio_size);
-		DisableFpga();
+		user_io_file_tx_write(buf, 512);
 
 		//strip original SNES ROM header if present (not used)
 		if (bytes2send & 512)
@@ -1669,16 +1682,36 @@ int user_io_file_tx(const char* name, unsigned char index, char opensave, char m
 	int progress = -1;
 	if (use_progress) MenuHide();
 
-	while (bytes2send)
+	int dosend = 1;
+	if (!strcasecmp(core_name, "GBA") && ((index >> 6) == 1 || (index >> 6) == 2))
+	{
+		fileTYPE fg = {};
+		if (!FileOpen(&fg, user_io_make_filepath(HomeDir, "goomba.rom")))
+		{
+			dosend = 0;
+			Info("Cannot open goomba.rom!");
+			sleep(1);
+		}
+		else
+		{
+			uint32_t sz = fg.size;
+			while (sz)
+			{
+				uint16_t chunk = (sz > sizeof(buf)) ? sizeof(buf) : sz;
+				FileReadAdv(&fg, buf, chunk);
+				user_io_file_tx_write(buf, chunk);
+				sz -= chunk;
+			}
+			FileClose(&fg);
+		}
+	}
+
+	while (dosend && bytes2send)
 	{
 		uint16_t chunk = (bytes2send > sizeof(buf)) ? sizeof(buf) : bytes2send;
 
 		FileReadAdv(&f, buf, chunk);
-
-		EnableFpga();
-		spi8(UIO_FILE_TX_DAT);
-		spi_write(buf, chunk, fio_size);
-		DisableFpga();
+		user_io_file_tx_write(buf, chunk);
 
 		if (use_progress)
 		{
@@ -1714,10 +1747,7 @@ int user_io_file_tx(const char* name, unsigned char index, char opensave, char m
 	}
 
 	// signal end of transmission
-	EnableFpga();
-	spi8(UIO_FILE_TX);
-	spi8(0x00);
-	DisableFpga();
+	user_io_set_download(0);
 	printf("\n");
 
 	if (is_zx81_core() && index)
@@ -2518,7 +2548,24 @@ void user_io_poll()
 
 						//Even after error we have to provide the block to the core
 						//Give an empty block.
-						if (!done) memset(buffer[disk], (sd_image[disk].type == 2) ? -1 : 0, sizeof(buffer[disk]));
+						if (!done)
+						{
+							if (sd_image[disk].type == 2)
+							{
+								if (is_megacd_core())
+								{
+									mcd_fill_blanksave(buffer[disk], lba);
+								}
+								else
+								{
+									memset(buffer[disk], -1, sizeof(buffer[disk]));
+								}
+							}
+							else
+							{
+								memset(buffer[disk], 0, sizeof(buffer[disk]));
+							}
+						}
 						buffer_lba[disk] = lba;
 					}
 
