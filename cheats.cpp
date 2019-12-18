@@ -352,22 +352,9 @@ static void cheats_send()
 
 	user_io_set_index(255);
 
-	// prepare transmission
-	EnableFpga();
-	spi8(UIO_FILE_TX);
-	spi8(0xff);
-	DisableFpga();
-
-	EnableFpga();
-	spi8(UIO_FILE_TX_DAT);
-	spi_write(buff, pos ? pos : 2, fpga_get_fio_size());
-	DisableFpga();
-
-	// signal end of transmission
-	EnableFpga();
-	spi8(UIO_FILE_TX);
-	spi8(0x00);
-	DisableFpga();
+	user_io_set_download(1);
+	user_io_file_tx_write(buff, pos ? pos : 2);
+	user_io_set_download(0);
 }
 
 void cheats_toggle()
