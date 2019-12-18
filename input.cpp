@@ -3303,3 +3303,12 @@ int input_state()
 	return grabbed;
 }
 
+void set_joy_ok(uint32_t mask, int dev) 
+{
+	input[dev].osd_ok = mask;
+}
+void set_joy_cancel(uint32_t mask, int dev) 
+{
+	input[dev].osd_cancel = mask;
+}
+

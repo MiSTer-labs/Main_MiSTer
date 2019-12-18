@@ -70,6 +70,20 @@ const uint32_t GAMEPAD_UI_6BTN_A     = GAMEPAD_UI_BTN_Y+4; // 'internal A' is ri
 const uint32_t GAMEPAD_UI_6BTN_B     = GAMEPAD_UI_BTN_A-2; // 'internal B' is middle button in ABC
 const uint32_t GAMEPAD_UI_6BTN_X     = GAMEPAD_UI_BTN_B;   // same column as 'B' as 'internal X = Y'
 
+const char *osd_joypad_label(uint32_t button, uint32_t button_style) {
+	if(button>5) button=5;
+	if(button_style>4) button_style=4;
+	switch(button) {
+		case 0:	return button_A_labels[button_style]; 
+		case 1:	return button_B_labels[button_style]; 
+		case 2:	return button_X_labels[button_style]; 
+		case 3:	return button_Y_labels[button_style]; 
+		case 4:	return button_L_labels[button_style]; 
+		case 5:	return button_R_labels[button_style]; 
+	}
+	return "";
+}
+
 // wrapper to return UI gamepad graphic
 const char *osd_joypad_raw_data(uint32_t line, uint32_t button_style) {
 	if (line>5) line=5;

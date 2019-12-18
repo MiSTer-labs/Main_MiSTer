@@ -8,6 +8,7 @@
 #include <stdint.h>
 
 //utility functions
+const char *osd_joypad_label(uint32_t button, uint32_t button_style);
 const char *osd_joypad_raw_data(uint32_t line);
 void osd_joypad_line(uint32_t line, char *s, uint32_t button_style);
 void osd_joypad_line_alt(uint32_t line, char *s, uint32_t idx, char alt, uint32_t button_style);

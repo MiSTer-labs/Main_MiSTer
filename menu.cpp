@@ -119,6 +119,7 @@ enum MENU
 	MENU_JOYPAD_TEST2,
 	MENU_INPUT_SETTINGS,
 	MENU_INPUT_SETTINGS1,
+	MENU_INPUT_SETTINGS2,
 	MENU_SCRIPTS_PRE,
 	MENU_SCRIPTS_PRE1,
 	MENU_SCRIPTS,
@@ -199,7 +200,7 @@ const char *config_stereo_msg[] = { "0%", "25%", "50%", "100%" };
 const char *config_uart_msg[] = { "     None", "      PPP", "  Console", "     MIDI" };
 const char *config_scaler_msg[] = { "Internal","Custom" };
 const char *config_gamma_msg[] = { "Off","On" };
-const char *config_navigation_msg[] = { "A=OK, B=Cancel", "B=OK, A=Cancel"};
+const char *config_navigation_msg[] = { " Menu navigation    A = OK \x16", " Menu navigation    B = OK \x16"};
 
 #define DPAD_NAMES 4
 #define DPAD_BUTTON_NAMES 12  //DPAD_NAMES + 6 buttons + start/select
@@ -229,7 +230,9 @@ static const char *info_bottom = "\x85\x81\x81\x81\x81\x81\x81\x81\x81\x81\x81\x
 
 // game UI related vars
 static uint32_t button_face_style = 0; 
+static uint32_t menu_navigation_style = 0;
 static const char button_selected = ' '; // what to show when blinking button
+
 // one screen width
 static const char* HELPTEXT_SPACER = "                                ";
 static char helptext_custom[1024];
@@ -2161,6 +2164,14 @@ void HandleUI(void)
 		
 	case MENU_INPUT_SETTINGS:
 		helptext = 0;
+		menusub = 0;
+		menumask = 0b1111;
+		OsdSetTitle("Input Settings", 0);
+		menustate = MENU_INPUT_SETTINGS1;
+		break;
+		
+	case MENU_INPUT_SETTINGS1:
+		helptext = 0;
 		menumask = 0b1111;
 		OsdSetTitle("Input Settings", 0);
 		OsdWrite(0);	
@@ -2169,16 +2180,16 @@ void HandleUI(void)
 		OsdWrite(8,   "      Controller Options      ");
 		OsdWrite(9);
 		OsdWrite(10,  " Controller Test           \x16", menusub == 0, 0);
-		OsdWrite(11,  " Menu navigation:   A = OK \x16", menusub == 1, 0);
+		OsdWrite(11,  config_navigation_msg[menu_navigation_style], menusub == 1, 0);
 		OsdWrite(12,  " Define controller         \x16", menusub == 2, 0);
 		OsdWrite(13);
 		OsdWrite(14);
 		OsdWrite(15, STD_EXIT, menusub==3, m);
-		parentstate = MENU_INPUT_SETTINGS;
-		menustate = MENU_INPUT_SETTINGS1;
+		parentstate = MENU_INPUT_SETTINGS1;
+		menustate = MENU_INPUT_SETTINGS2;
 		break;
 		
-	case MENU_INPUT_SETTINGS1:
+	case MENU_INPUT_SETTINGS2:
 		if (menu) {
 			menustate = MENU_SYSTEM1;
 			menusub = 2;
@@ -2191,15 +2202,25 @@ void HandleUI(void)
 					menusub = 0;
 					break;
 				case 1:
+					menu_navigation_style ++;
+					if(menu_navigation_style>1)
+						menu_navigation_style = 0;
+					if(menu_navigation_style) {
+						set_joy_ok(SYS_BTN_B);
+						set_joy_cancel(SYS_BTN_A);
+					} else {
+						set_joy_ok(SYS_BTN_A);
+						set_joy_cancel(SYS_BTN_B);
+					}
 					break;
 				case 2:
 					// launch controller mapping
-					strcpy(joy_bnames[SYS_BTN_A - DPAD_NAMES], "A");
-					strcpy(joy_bnames[SYS_BTN_B - DPAD_NAMES], "B");
-					strcpy(joy_bnames[SYS_BTN_X - DPAD_NAMES], "X");
-					strcpy(joy_bnames[SYS_BTN_Y - DPAD_NAMES], "Y");
-					strcpy(joy_bnames[SYS_BTN_L - DPAD_NAMES], "L");
-					strcpy(joy_bnames[SYS_BTN_R - DPAD_NAMES], "R");
+					strcpy(joy_bnames[SYS_BTN_A - DPAD_NAMES], osd_joypad_label(0, button_face_style));
+					strcpy(joy_bnames[SYS_BTN_B - DPAD_NAMES], osd_joypad_label(1, button_face_style));
+					strcpy(joy_bnames[SYS_BTN_X - DPAD_NAMES], osd_joypad_label(2, button_face_style));
+					strcpy(joy_bnames[SYS_BTN_Y - DPAD_NAMES], osd_joypad_label(3, button_face_style));
+					strcpy(joy_bnames[SYS_BTN_L - DPAD_NAMES], osd_joypad_label(4, button_face_style));
+					strcpy(joy_bnames[SYS_BTN_R - DPAD_NAMES], osd_joypad_label(5, button_face_style));
 					strcpy(joy_bnames[SYS_BTN_SELECT - DPAD_NAMES], "Select");
 					strcpy(joy_bnames[SYS_BTN_START  - DPAD_NAMES], "Start");
 					strcpy(joy_bnames[SYS_MS_RIGHT - DPAD_NAMES], "Mouse Move RIGHT");
@@ -2212,7 +2233,6 @@ void HandleUI(void)
 					strcpy(joy_bnames[SYS_MS_BTN_EMU - DPAD_NAMES], "Mouse Emu / Sniper");
 					joy_bcount = 16+1; //buttons + OSD/KTGL button
 					start_map_setting(joy_bcount + 6); // + dpad + Analog X/Y
-					parentstate = MENU_JOYDIGMAP;
 					menustate = MENU_JOYDIGMAP;
 					menusub = 0;
 					break;
@@ -2222,7 +2242,6 @@ void HandleUI(void)
 					break;
 			}
 		}
-		menustate = MENU_INPUT_SETTINGS;
 		break;
 
 	case MENU_JOYPAD_TEST:
