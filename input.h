@@ -97,5 +97,11 @@ void input_uinp_destroy();
 
 extern char joy_bnames[NUMBUTTONS][32];
 extern int  joy_bcount;
+extern uint32_t osd_ok;
+extern uint32_t osd_cancel;
+
+extern void set_joy_ok(uint32_t button_idx);
+extern void set_joy_cancel(uint32_t button_idx);
+
 
 #endif

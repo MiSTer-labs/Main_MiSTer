@@ -15,6 +15,7 @@
 #include <linux/uinput.h>
 #include <sys/time.h>
 #include <sys/types.h>
+#include <bitset>
 
 #include "input.h"
 #include "user_io.h"
@@ -25,13 +26,21 @@
 #include "osd.h"
 #include "video.h"
 #include "joymapping.h"
+#include "osd_joypad.h"
 
 #define NUMDEV 30
 #define NUMPLAYERS 6
 #define UINPUT_NAME "MiSTer virtual input"
 
+#define MAPPING_TYPE_ZERO      0
+#define MAPPING_TYPE_ONE       1
+#define MAPPING_TYPE_KBDMAP    2
+#define MAPPING_TYPE_JOYKEYMAP 3
+
 char joy_bnames[NUMBUTTONS][32] = {};
 int  joy_bcount = 0;
+uint32_t osd_ok     = 0x10;
+uint32_t osd_cancel = 0x20;
 
 static int ev2amiga[] =
 {
@@ -1005,7 +1014,11 @@ typedef struct
 	uint32_t map[NUMBUTTONS];
 
 	uint8_t  osd_combo;
-
+	
+	/*uint16_t osd_ok;
+	uint16_t osd_cancel;*/
+	uint16_t osd_backspace;
+	
 	uint8_t  has_mmap;
 	uint32_t mmap[NUMBUTTONS];
 	uint16_t jkmap[1024];
@@ -1189,29 +1202,32 @@ void start_map_setting(int cnt, int set)
 	if (!mapping_set)
 	{
 		mapping_dev = -1;
-		mapping_type = (cnt < 0) ? 3 : cnt ? 1 : 2;
+		mapping_type = (cnt < 0) ? MAPPING_TYPE_JOYKEYMAP : cnt ? MAPPING_TYPE_ONE : MAPPING_TYPE_KBDMAP;
 	}
 	mapping_count = cnt;
 	mapping_clear = 0;
 	tmp_axis_n = 0;
 
-	if (mapping_type <= 1 && is_menu_core()) mapping_button = -6;
+	if (mapping_type <= MAPPING_TYPE_ONE && is_menu_core()) mapping_button = -6; // for axis
 	memset(tmp_axis, 0, sizeof(tmp_axis));
 
 	//un-stick the enter key
 	user_io_kbd(KEY_ENTER, 0);
 }
 
+//button currently mapped, can be negative if analog axis
 int get_map_button()
 {
 	return mapping_button;
 }
 
+//returns mapping type currently active
 int get_map_type()
 {
 	return mapping_type;
 }
 
+//returns whether the clear flag is set
 int get_map_clear()
 {
 	return mapping_clear;
@@ -1223,6 +1239,7 @@ int get_map_cancel()
 	return (mapping && !is_menu_core() && osd_timer && CheckTimer(osd_timer));
 }
 
+// generates filenames for mapping config
 static char *get_map_name(int dev, int def)
 {
 	static char name[128];
@@ -1231,6 +1248,7 @@ static char *get_map_name(int dev, int def)
 	return name;
 }
 
+// generates filename for kbd map 
 static char *get_kbdmap_name(int dev)
 {
 	static char name[128];
@@ -1238,24 +1256,24 @@ static char *get_kbdmap_name(int dev)
 	return name;
 }
 
+// stops mapping mode
 void finish_map_setting(int dismiss)
 {
 	mapping = 0;
 	if (mapping_dev<0) return;
 
-	if (mapping_type == 2)
+	if (mapping_type == MAPPING_TYPE_KBDMAP)
 	{
 		if (dismiss) input[mapping_dev].has_kbdmap = 0;
 		else FileSaveConfig(get_kbdmap_name(mapping_dev), &input[mapping_dev].kbdmap, sizeof(input[mapping_dev].kbdmap));
 	}
-	else if (mapping_type == 3)
+	else if (mapping_type == MAPPING_TYPE_JOYKEYMAP)
 	{
 		if (dismiss) memset(input[mapping_dev].jkmap, 0, sizeof(input[mapping_dev].jkmap));
 	}
 	else
 	{
 		for (int i = 0; i < NUMDEV; i++) input[i].has_map = 0;
-
 		if (!dismiss) FileSaveJoymap(get_map_name(mapping_dev, 0), &input[mapping_dev].map, sizeof(input[mapping_dev].map));
 		if (is_menu_core()) input[mapping_dev].has_mmap = 0;
 	}
@@ -1572,6 +1590,7 @@ static void joy_digital(int jnum, uint32_t mask, uint32_t code, char press, int 
 			return;
 		}
 
+		// toggle mouse emulation
 		if (!user_io_osd_is_visible() && (bnum == BTN_OSD) && (mouse_emu & 1))
 		{
 			if (press)
@@ -1591,46 +1610,54 @@ static void joy_digital(int jnum, uint32_t mask, uint32_t code, char press, int 
 			return;
 		}
 
+		// OSD control
 		if (user_io_osd_is_visible() || (bnum == BTN_OSD))
 		{
 			memset(joy, 0, sizeof(joy));
 			struct input_event ev;
 			ev.type = EV_KEY;
 			ev.value = press;
-			switch (mask)
-			{
-			case JOY_RIGHT:
-				ev.code = KEY_RIGHT;
-				break;
-
-			case JOY_LEFT:
-				ev.code = KEY_LEFT;
-				break;
-
-			case JOY_UP:
-				ev.code = KEY_UP;
-				break;
-
-			case JOY_DOWN:
-				ev.code = KEY_DOWN;
-				break;
-
-			case JOY_BTN1:
-				ev.code = KEY_ENTER;
-				break;
-
-			case JOY_BTN2:
-				ev.code = KEY_ESC;
-				break;
-
-			case JOY_BTN3:
-				ev.code = KEY_BACKSPACE;
-				break;
-
-			default:
-				ev.code = (bnum == BTN_OSD) ? KEY_MENU : 0;
+			//if (!input[num].osd_ok) {
+			//	printf("Defaulting osd OK to BTN1\n");
+			//	input[num].osd_ok = JOY_BTN1;
+			//}
+			//if (!input[num].osd_cancel)    input[num].osd_cancel = JOY_BTN2;
+			if (!input[num].osd_backspace) input[num].osd_backspace = JOY_BTN3;
+			uint32_t osd_action = ( osd_ok | osd_cancel | input[num].osd_backspace);
+			//priority to joystick movement
+			if(mask & JOY_MOVE) {
+				switch (mask) {
+					case JOY_RIGHT:
+						ev.code = KEY_RIGHT;
+						break;
+					case JOY_LEFT:
+						ev.code = KEY_LEFT;
+						break;
+					case JOY_UP:
+						ev.code = KEY_UP;
+						break;
+					case JOY_DOWN:
+						ev.code = KEY_DOWN;
+						break;
+				}
+			} else {
+				// then check button presses
+				if(mask & osd_action) {
+					if (mask == osd_ok) {
+						printf("OSD ok: %s\n", std::bitset<16>(mask).to_string().c_str());
+						ev.code = KEY_ENTER;
+					} else {
+						if(mask == osd_cancel) {
+							ev.code = KEY_ESC;
+						} else {
+							ev.code = KEY_BACKSPACE;
+						}
+					}
+				} else {
+					// default - just accept menu key
+					ev.code = (bnum == BTN_OSD) ? KEY_MENU : 0;
+				}
 			}
-
 			input_cb(&ev, 0, 0);
 		}
 		else if (video_fb_state())
@@ -1720,9 +1747,13 @@ static void input_cb(struct input_event *ev, struct input_absinfo *absinfo, int 
 
 	static int key_mapped = 0;
 
-	if (ev->type == EV_KEY && mapping && mapping_type == 3 && ev->code == input[dev].mmap[SYS_BTN_OSD_KTGL + 1]) ev->code = KEY_ENTER;
+	if (ev->type == EV_KEY 
+		&& mapping && mapping_type == MAPPING_TYPE_JOYKEYMAP 
+		&& ev->code == input[dev].mmap[SYS_BTN_OSD_KTGL+1]) { 
+		ev->code = KEY_ENTER;
+	}
 
-	int map_skip = (ev->type == EV_KEY && ev->code == KEY_SPACE && ((mapping_dev >= 0 && mapping_type==1) || mapping_button<0));
+	int map_skip = (ev->type == EV_KEY && ev->code == KEY_SPACE && ((mapping_dev >= 0 && mapping_type==MAPPING_TYPE_ONE) || mapping_button<0));
 	int cancel   = (ev->type == EV_KEY && ev->code == KEY_ESC);
 	int enter    = (ev->type == EV_KEY && ev->code == KEY_ENTER);
 	int origcode = ev->code;
@@ -1804,7 +1835,7 @@ static void input_cb(struct input_event *ev, struct input_absinfo *absinfo, int 
 	}
 
 	//mapping
-	if (mapping && (mapping_dev >= 0 || ev->value) && !((mapping_type < 2 || !mapping_button) && (cancel || enter)))
+	if (mapping && (mapping_dev >= 0 || ev->value) && !((mapping_type <= MAPPING_TYPE_ONE || !mapping_button) && (cancel || enter)))
 	{
 		if (is_menu_core())
 		{
@@ -1814,7 +1845,7 @@ static void input_cb(struct input_event *ev, struct input_absinfo *absinfo, int 
 
 		if (ev->type == EV_KEY && mapping_button>=0 && !osd_event)
 		{
-			if (mapping_type == 2)
+			if (mapping_type == MAPPING_TYPE_KBDMAP)
 			{
 				if (ev->code < 256)
 				{
@@ -1837,7 +1868,7 @@ static void input_cb(struct input_event *ev, struct input_absinfo *absinfo, int 
 				}
 				return;
 			}
-			else if (mapping_type == 3)
+			else if (mapping_type == MAPPING_TYPE_JOYKEYMAP)
 			{
 				if (ev->value == 1 && !mapping_button)
 				{
@@ -1860,7 +1891,7 @@ static void input_cb(struct input_event *ev, struct input_absinfo *absinfo, int 
 				if (ev->value == 1 && mapping_dev < 0 && !clear)
 				{
 					mapping_dev = dev;
-					mapping_type = (ev->code >= 256) ? 1 : 0;
+					mapping_type = (ev->code >= 256) ? MAPPING_TYPE_ONE : MAPPING_TYPE_ZERO;
 					key_mapped = 0;
 				}
 
@@ -1991,7 +2022,7 @@ static void input_cb(struct input_event *ev, struct input_absinfo *absinfo, int 
 					if (ev->type == EV_ABS && max)
 					{
 						if (mapping_dev < 0) mapping_dev = dev;
-						mapping_type = 1;
+						mapping_type = MAPPING_TYPE_ONE;
 
 						if (absinfo->maximum > 2)
 						{
@@ -2015,7 +2046,7 @@ static void input_cb(struct input_event *ev, struct input_absinfo *absinfo, int 
 							{
 								// keyboard, skip stick 1/2
 								mapping_button += 4;
-								mapping_type = 0;
+								mapping_type = MAPPING_TYPE_ZERO;
 							}
 						}
 					}
@@ -2042,7 +2073,7 @@ static void input_cb(struct input_event *ev, struct input_absinfo *absinfo, int 
 							for (int i = 0; i < tmp_axis_n; i++) if (ev->code == (tmp_axis[i] & 0xFFFF)) found = 1;
 							if (!found)
 							{
-								mapping_type = 1;
+								mapping_type = MAPPING_TYPE_ONE;
 								tmp_axis[tmp_axis_n++] = ev->code | 0x20000;
 								//if (min) tmp_axis[idx - AXIS1_X] |= 0x10000;
 								mapping_button++;
@@ -2064,7 +2095,7 @@ static void input_cb(struct input_event *ev, struct input_absinfo *absinfo, int 
 			}
 		}
 
-		if (mapping_type <= 1 && map_skip && mapping_button < mapping_count)
+		if (mapping_type <= MAPPING_TYPE_ONE && map_skip && mapping_button < mapping_count)
 		{
 			if (ev->value == 1)
 			{
@@ -2083,7 +2114,7 @@ static void input_cb(struct input_event *ev, struct input_absinfo *absinfo, int 
 			}
 		}
 
-		if (is_menu_core() && mapping_type <= 1 && mapping_dev >= 0)
+		if (is_menu_core() && mapping_type <= MAPPING_TYPE_ONE && mapping_dev >= 0)
 		{
 			memcpy(&input[mapping_dev].mmap[SYS_AXIS1_X], tmp_axis, sizeof(tmp_axis));
 			memcpy(&input[mapping_dev].map[SYS_AXIS1_X], tmp_axis, sizeof(tmp_axis));
@@ -2133,11 +2164,12 @@ static void input_cb(struct input_event *ev, struct input_absinfo *absinfo, int 
 					if (osd_event == 2) joy_digital(input[dev].num, 0, 0, 0, BTN_OSD);
 				}
 
+				
 				if (user_io_osd_is_visible() || video_fb_state())
 				{
 					if (ev->value <= 1)
 					{
-						for (int i = 0; i <= SYS_BTN_Y; i++)
+						for (int i = 0; i <= SYS_BTN_START; i++)
 						{
 							if (ev->code == input[dev].mmap[i])
 							{
@@ -2169,7 +2201,8 @@ static void input_cb(struct input_event *ev, struct input_absinfo *absinfo, int 
 							if (ev->code == (key + 1)) joy_digital(0, 1 << 2, 0, ev->value, 2);
 							if (ev->code == key) joy_digital(0, 1 << 3, 0, ev->value, 3);
 						}
-					}
+						
+					} 
 				}
 				else
 				{
@@ -2217,7 +2250,8 @@ static void input_cb(struct input_event *ev, struct input_absinfo *absinfo, int 
 						if (ev->code == (input[dev].map[i] & 0xFFFF) || ev->code == (input[dev].map[i] >> 16))
 						{
 							if (i <= 3 && origcode == ev->code) origcode = 0; // prevent autofire for original dpad
-							if (ev->value <= 1) joy_digital(input[dev].num, 1 << i, origcode, ev->value, i, (ev->code == input[dev].mmap[SYS_BTN_OSD_KTGL + 1] || ev->code == input[dev].mmap[SYS_BTN_OSD_KTGL + 2]));
+							if (ev->value <= 1) 
+								joy_digital(input[dev].num, 1 << i, origcode, ev->value, i, (ev->code == input[dev].mmap[SYS_BTN_OSD_KTGL + 1] || ev->code == input[dev].mmap[SYS_BTN_OSD_KTGL + 2]));
 
 							// support 2 simultaneous functions for 1 button if defined in 2 sets. No return.
 						}
@@ -2886,6 +2920,15 @@ int input_test(int getchar)
 										//keyboard, buttons
 									case EV_KEY:
 										printf("Input event: type=EV_KEY, code=%d(0x%x), value=%d, jnum=%d, ID:%04x:%04x:%02d\n", ev.code, ev.code, ev.value, input[dev].num, input[dev].vid, input[dev].pid, i);
+										//report status for central joystick state
+										if(is_menu_core() && user_io_osd_is_visible()) {
+											for(int i=SYS_BTN_RIGHT; i<=SYS_BTN_START; i++) {
+												if ((ev.code == (input[dev].map[i]&0xFFFF0000)) || (ev.code == (input[dev].map[i]&0xFFFF))) {
+													//printf("found matching map at idx %d\n", i);
+													set_joypad_status(dev, i, ev.value);
+												}
+											}
+										}
 										break;
 
 									case EV_REL:
@@ -2961,7 +3004,7 @@ int input_test(int getchar)
 								if (!noabs) input_cb(&ev, &absinfo, i);
 
 								//sumulate digital directions from analog
-								if (ev.type == EV_ABS && !(mapping && mapping_type <= 1 && mapping_button < -4) && !(ev.code <= 1 && input[dev].lightgun))
+								if (ev.type == EV_ABS && !(mapping && mapping_type <= MAPPING_TYPE_ONE && mapping_button < -4) && !(ev.code <= 1 && input[dev].lightgun))
 								{
 									input_absinfo *pai = 0;
 									uint8_t axis_edge = 0;
@@ -3004,6 +3047,16 @@ int input_test(int getchar)
 											ev.value = 1;
 											ev.code = ecode + axis_edge;
 											input_cb(&ev, pai, i);
+										}
+										
+										//report status for central joystick state
+										if(is_menu_core() && user_io_osd_is_visible()) {
+											for(int i=SYS_BTN_RIGHT; i<=SYS_BTN_START; i++) {
+												if ((ev.code == (input[dev].map[i]&0xFFFF0000)) || (ev.code == (input[dev].map[i]&0xFFFF))) {
+													//printf("found matching map at idx %d\n", i);
+													set_joypad_status(dev, i, ev.value);
+												}
+											}
 										}
 									}
 
@@ -3255,3 +3308,19 @@ int input_state()
 {
 	return grabbed;
 }
+
+void set_joy_ok(uint32_t button_idx) 
+{
+	if(button_idx > 16) button_idx=16;
+	uint16_t mask = 0b1 << button_idx;
+	printf("OSD OK set to    : %s\n", std::bitset<16>(mask).to_string().c_str());
+	osd_ok = mask;	
+}
+void set_joy_cancel(uint32_t button_idx) 
+{
+	if(button_idx > 16) button_idx=16;
+	uint16_t mask = 0b1 << button_idx;
+	printf("OSD Cancel set to: %s\n", std::bitset<16>(mask).to_string().c_str());
+	osd_cancel = mask;	
+}
+
