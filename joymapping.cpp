@@ -6,31 +6,24 @@ This file contains lookup information on known controllers
 #include <stdlib.h>
 #include <inttypes.h>
 #include <string.h>
+#include <bitset>
 
 #include "joymapping.h"
 #include "menu.h"
 #include "input.h"
 #include "user_io.h"
 #include "cfg.h"
+#include "stringutils.h"
 
 #define DPAD_COUNT 4
 
 /*****************************************************************************/
-static void trim(char * s)
-{
-	char *p = s;
-	int l = strlen(p);
-	if (!l) return;
 
-	while (p[l - 1] == ' ') p[--l] = 0;
-	while (*p && (*p == ' ')) ++p, --l;
-
-	memmove(s, p, l + 1);
-}
 
 static char joy_nnames[NUMBUTTONS][32];
 static char joy_pnames[NUMBUTTONS][32];
 static int defaults = 0;
+uint32_t joy_status[4];
 
 static void get_buttons()
 {
@@ -249,3 +242,24 @@ void map_joystick(uint32_t *map, uint32_t *mmap)
 
 	Info(mapinfo, 6000);
 }
+
+// status reporting from outside functions
+uint32_t set_joypad_status(uint32_t dev, uint32_t index, uint32_t value) {
+	// ignore invalid output
+	if (dev > 4) return joy_status[0];
+	if (index > 16) return joy_status[dev];
+	// switch status
+	if (value)
+		joy_status[dev] |= (0b1 << index);
+	else
+		joy_status[dev] &= ~(0b1 << index);
+	//printf("set joy status: %s\n", std::bitset<32>(joy_status[dev]).to_string().c_str());
+	return joy_status[dev];
+}
+
+uint32_t get_joypad_status(uint32_t dev) {
+	if (dev > 4) return joy_status[0];
+	//printf("returning joy status: %s\n", std::bitset<32>(joy_status[dev]).to_string().c_str());
+	return joy_status[dev];
+}
+

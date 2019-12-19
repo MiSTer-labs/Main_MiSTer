@@ -41,6 +41,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <libgen.h>
+#include <bitset>
 
 #include "file_io.h"
 #include "osd.h"
@@ -55,7 +56,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "bootcore.h"
 #include "cheats.h"
 #include "video.h"
+#include "stringutils.h"
 #include "joymapping.h"
+#include "osd_joypad.h"
 
 #include "support.h"
 
@@ -111,6 +114,12 @@ enum MENU
 	MENU_JOYKBDMAP1,
 	MENU_KBDMAP,
 	MENU_KBDMAP1,
+	MENU_JOYPAD_TEST,
+	MENU_JOYPAD_TEST1,
+	MENU_JOYPAD_TEST2,
+	MENU_INPUT_SETTINGS,
+	MENU_INPUT_SETTINGS1,
+	MENU_INPUT_SETTINGS2,
 	MENU_SCRIPTS_PRE,
 	MENU_SCRIPTS_PRE1,
 	MENU_SCRIPTS,
@@ -191,6 +200,7 @@ const char *config_stereo_msg[] = { "0%", "25%", "50%", "100%" };
 const char *config_uart_msg[] = { "     None", "      PPP", "  Console", "     MIDI" };
 const char *config_scaler_msg[] = { "Internal","Custom" };
 const char *config_gamma_msg[] = { "Off","On" };
+const char *config_navigation_msg[] = { "\x10  Menu navigation: Classic \x16", "\x10  Menu navigation: Modern  \x16"};
 
 #define DPAD_NAMES 4
 #define DPAD_BUTTON_NAMES 12  //DPAD_NAMES + 6 buttons + start/select
@@ -217,6 +227,10 @@ static const char *helptexts[] =
 
 static const char *info_top = "\x80\x81\x81\x81\x81\x81\x81\x81\x81\x81\x81\x81\x81\x81\x81\x81\x81\x81\x81\x81\x81\x81\x81\x81\x81\x81\x81\x81\x82";
 static const char *info_bottom = "\x85\x81\x81\x81\x81\x81\x81\x81\x81\x81\x81\x81\x81\x81\x81\x81\x81\x81\x81\x81\x81\x81\x81\x81\x81\x81\x81\x81\x84";
+
+// game UI related vars
+static uint32_t button_face_style = 0; 
+static const char button_selected = ' '; // what to show when blinking button
 
 // one screen width
 static const char* HELPTEXT_SPACER = "                                ";
@@ -814,6 +828,7 @@ void HandleUI(void)
 	static int has_fb_terminal = 0;
 	static unsigned long flash_timer = 0;
 	static int flash_state = 0;
+	static uint32_t jstatus = get_joypad_status(0);
 
 	static char	cp_MenuCancel;
 
@@ -2145,7 +2160,147 @@ void HandleUI(void)
 			}
 		}
 		break;
+		
+	case MENU_INPUT_SETTINGS:
+		helptext = 0;
+		menusub = 0;
+		menumask = 0b1111;
+		OsdSetTitle("Input Settings", 0);
+		menustate = MENU_INPUT_SETTINGS1;
+		break;
+		
+	case MENU_INPUT_SETTINGS1:
+		helptext = 0;
+		menumask = 0b1111;
+		OsdSetTitle("Input Settings", 0);
+		OsdWrite(0);
+		osd_joypad_draw(1, button_face_style);
+		OsdWrite(7);
+		OsdWrite(8,   "      Controller Options      ");
+		OsdWrite(9);
+		OsdWrite(11,  " Controller Test/Style     \x16", menusub == 0, 0);
+		OsdWrite(12,  " Define controller         \x16", menusub == 1, 0);
+		OsdWrite(13,  " Menu navigation options   \x16", menusub == 2, 0);
+		OsdWrite(14);
+		OsdWrite(15, STD_EXIT, menusub==3, m);
+		parentstate = MENU_INPUT_SETTINGS1;
+		menustate = MENU_INPUT_SETTINGS2;
+		break;
+		
+	case MENU_INPUT_SETTINGS2:
+		if (menu) {
+			menustate = MENU_SYSTEM1;
+			menusub = 2;
+			break;
+		}
+		else if(select) {
+			switch (menusub) {
+				case 0:
+					menustate = MENU_JOYPAD_TEST;
+					menusub = 0;
+					break;
+				case 1:
+					// launch controller mapping
+					strcpy(joy_bnames[SYS_BTN_A - DPAD_NAMES], osd_joypad_label(0, button_face_style));
+					strcpy(joy_bnames[SYS_BTN_B - DPAD_NAMES], osd_joypad_label(1, button_face_style));
+					strcpy(joy_bnames[SYS_BTN_X - DPAD_NAMES], osd_joypad_label(2, button_face_style));
+					strcpy(joy_bnames[SYS_BTN_Y - DPAD_NAMES], osd_joypad_label(3, button_face_style));
+					strcpy(joy_bnames[SYS_BTN_L - DPAD_NAMES], osd_joypad_label(4, button_face_style));
+					strcpy(joy_bnames[SYS_BTN_R - DPAD_NAMES], osd_joypad_label(5, button_face_style));
+					strcpy(joy_bnames[SYS_BTN_SELECT - DPAD_NAMES], "Select");
+					strcpy(joy_bnames[SYS_BTN_START  - DPAD_NAMES], "Start");
+					strcpy(joy_bnames[SYS_MS_RIGHT - DPAD_NAMES], "Mouse Move RIGHT");
+					strcpy(joy_bnames[SYS_MS_LEFT - DPAD_NAMES], "Mouse Move LEFT");
+					strcpy(joy_bnames[SYS_MS_DOWN - DPAD_NAMES], "Mouse Move DOWN");
+					strcpy(joy_bnames[SYS_MS_UP - DPAD_NAMES], "Mouse Move UP");
+					strcpy(joy_bnames[SYS_MS_BTN_L - DPAD_NAMES], "Mouse Btn Left");
+					strcpy(joy_bnames[SYS_MS_BTN_R - DPAD_NAMES], "Mouse Btn Right");
+					strcpy(joy_bnames[SYS_MS_BTN_M - DPAD_NAMES], "Mouse Btn Middle");
+					strcpy(joy_bnames[SYS_MS_BTN_EMU - DPAD_NAMES], "Mouse Emu / Sniper");
+					joy_bcount = 16+1; //buttons + OSD/KTGL button
+					start_map_setting(joy_bcount + 6); // + dpad + Analog X/Y
+					menustate = MENU_JOYDIGMAP;
+					menusub = 0;
+					break;
+				case 2:
+					// TODO: configurator for menu navigation
+					/*
+					using functions e.g.:
+					   set_joy_ok(SYS_BTN_B);
+					   set_joy_cancel(SYS_BTN_A);
+					   set_joy_backspace(SYS_BTN_L);
+					
+					*/
+					break;
+				case 3:
+					menustate = MENU_SYSTEM1;
+					menusub = 2;
+					break;
+			}
+		}
+		break;
 
+	case MENU_JOYPAD_TEST:
+		helptext = 0;
+		menumask = 0b11;
+		menusub = 0;
+		OsdSetTitle("Controller Test", 0);
+		for(uint32_t i=0; i<10; i++)
+			OsdWrite(i);
+		osd_joypad_draw(6, 0);
+		for(uint32_t i=11; i<17; i++)
+			OsdWrite(i);
+		menustate = MENU_JOYPAD_TEST1;
+		break;
+
+	case MENU_JOYPAD_TEST1:
+		memset(s, 0, sizeof(s));
+		OsdWrite(0);
+		OsdWrite(1);
+		OsdWrite(2, "        Buttons Style");
+		sprintf(s, "%s", osd_joypad_style_name(button_face_style) );
+		OsdWrite(3, s, menusub == 0, m);
+		OsdWrite(4);
+		OsdWrite(5);
+		osd_joypad_draw(6, button_face_style);
+		osd_joypad_update(6, button_face_style, '*', jstatus);
+		jstatus = get_joypad_status(0);
+		sprintf(s, "        %s", std::bitset<12>(jstatus).to_string().c_str());
+		OsdWrite(13, s);
+		OsdWrite(14);
+		OsdWrite(15, STD_EXIT, menusub == 1, m); 
+		parentstate = MENU_JOYPAD_TEST1;
+		menustate = MENU_JOYPAD_TEST2;
+		break;
+	
+	case MENU_JOYPAD_TEST2:
+		switch (menusub) {
+			case 0:
+				if(left) {
+					if (button_face_style==0)
+						button_face_style=4;
+					else 
+						button_face_style--;
+				}
+				if(right) {
+					if(button_face_style==4)
+						button_face_style=0;
+					else
+						button_face_style++;
+					break;
+				}
+				break;
+			case 1:
+				if(select) {
+					menustate = MENU_INPUT_SETTINGS;
+					menusub = 1;
+					break;
+				}
+		}
+		if(!select) 
+			menustate = MENU_JOYPAD_TEST1; //don't wait for up/down to switch UI
+		break;
+		
 	case MENU_JOYDIGMAP:
 		helptext = 0;
 		menumask = 1;
@@ -2253,30 +2408,12 @@ void HandleUI(void)
 					flash_timer = GetTimer(100);
 					if (flash_state)
 					{
-						switch (get_map_button())
-						{
-							case SYS_BTN_L:      OsdWrite(10, "  \x86   \x88               \x86 R \x88  "); break;
-							case SYS_BTN_R:      OsdWrite(10, "  \x86 L \x88               \x86   \x88  "); break;
-							case SYS_BTN_UP:     OsdWrite(12, " \x83                     X   \x83");        break;
-							case SYS_BTN_X:      OsdWrite(12, " \x83   U                     \x83");        break;
-							case SYS_BTN_A:      OsdWrite(13, " \x83 L \x1b R  Sel Start  Y     \x83");     break;
-							case SYS_BTN_Y:      OsdWrite(13, " \x83 L \x1b R  Sel Start      A \x83");     break;
-							case SYS_BTN_LEFT:   OsdWrite(13, " \x83   \x1b R  Sel Start  Y   A \x83");     break;
-							case SYS_BTN_RIGHT:  OsdWrite(13, " \x83 L \x1b    Sel Start  Y   A \x83");     break;
-							case SYS_BTN_SELECT: OsdWrite(13, " \x83 L \x1b R      Start  Y   A \x83");     break;
-							case SYS_BTN_START:  OsdWrite(13, " \x83 L \x1b R  Sel        Y   A \x83");     break;
-							case SYS_BTN_DOWN:   OsdWrite(14, " \x83       \x86\x81\x81\x81\x81\x81\x81\x81\x81\x81\x88   B   \x83"); break;
-							case SYS_BTN_B:      OsdWrite(14, " \x83   D   \x86\x81\x81\x81\x81\x81\x81\x81\x81\x81\x88       \x83"); break;
-						}
+						uint16_t mask = 0b1 << get_map_button();
+						osd_joypad_update(10, button_face_style, button_selected, mask);;
 					}
 					else
 					{
-						OsdWrite(10, "  \x86 L \x88               \x86 R \x88  ");
-						OsdWrite(11, " \x86\x81\x81\x81\x81\x81\x81\x81\x81\x81\x81\x81\x81\x81\x81\x81\x81\x81\x81\x81\x81\x81\x81\x81\x81\x81\x88");
-						OsdWrite(12, " \x83   U                 X   \x83");
-						OsdWrite(13, " \x83 L \x1b R  Sel Start  Y   A \x83");
-						OsdWrite(14, " \x83   D   \x86\x81\x81\x81\x81\x81\x81\x81\x81\x81\x88   B   \x83");
-						OsdWrite(15, " \x8b\x81\x81\x81\x81\x81\x81\x81\x8a         \x8b\x81\x81\x81\x81\x81\x81\x81\x8a");
+						osd_joypad_draw(10, button_face_style);
 					}
 					flash_state = !flash_state;
 				}
@@ -2285,13 +2422,7 @@ void HandleUI(void)
 			{
 				if(flash_timer)
 				{
-					//clear all gamepad gfx
-					OsdWrite(10);
-					OsdWrite(11);
-					OsdWrite(12);
-					OsdWrite(13);
-					OsdWrite(14);
-					OsdWrite(15);
+					osd_joypad_clear(10);
 					flash_timer = 0;
 				}
 
@@ -2333,7 +2464,7 @@ void HandleUI(void)
 				finish_map_setting(menu);
 				if (is_menu_core())
 				{
-					menustate = MENU_SYSTEM1;
+					menustate = MENU_INPUT_SETTINGS1;
 					menusub = 2;
 				}
 				else
@@ -4064,7 +4195,7 @@ void HandleUI(void)
 			else sprintf(s, "   Available space: %llugb", avail / (1024 * 1024 * 1024));
 			OsdWrite(4, s, 0, 0);
 		}
-		menumask = 15;
+		menumask = 0b1111;
 		OsdWrite(2, "", 0, 0);
 		if (getStorage(0))
 		{
@@ -4086,7 +4217,7 @@ void HandleUI(void)
 		}
 		OsdWrite(6, "", 0, 0);
 		OsdWrite(7, " Remap keyboard            \x16", menusub == 1, 0);
-		OsdWrite(8, " Define joystick buttons   \x16", menusub == 2, 0);
+		OsdWrite(8, " Input Settings            \x16", menusub == 2, 0);
 		OsdWrite(9, " Scripts                   \x16", menusub == 3, 0);
 		sysinfo_timer = 0;
 
@@ -4112,25 +4243,7 @@ void HandleUI(void)
 				menusub = 0;
 				break;
 			case 2:
-				strcpy(joy_bnames[SYS_BTN_A - DPAD_NAMES], "A (OK/Enter)");
-				strcpy(joy_bnames[SYS_BTN_B - DPAD_NAMES], "B (ESC/Back)");
-				strcpy(joy_bnames[SYS_BTN_X - DPAD_NAMES], "X (Backspace)");
-				strcpy(joy_bnames[SYS_BTN_Y - DPAD_NAMES], "Y");
-				strcpy(joy_bnames[SYS_BTN_L - DPAD_NAMES], "L");
-				strcpy(joy_bnames[SYS_BTN_R - DPAD_NAMES], "R");
-				strcpy(joy_bnames[SYS_BTN_SELECT - DPAD_NAMES], "Select");
-				strcpy(joy_bnames[SYS_BTN_START  - DPAD_NAMES], "Start");
-				strcpy(joy_bnames[SYS_MS_RIGHT - DPAD_NAMES], "Mouse Move RIGHT");
-				strcpy(joy_bnames[SYS_MS_LEFT - DPAD_NAMES], "Mouse Move LEFT");
-				strcpy(joy_bnames[SYS_MS_DOWN - DPAD_NAMES], "Mouse Move DOWN");
-				strcpy(joy_bnames[SYS_MS_UP - DPAD_NAMES], "Mouse Move UP");
-				strcpy(joy_bnames[SYS_MS_BTN_L - DPAD_NAMES], "Mouse Btn Left");
-				strcpy(joy_bnames[SYS_MS_BTN_R - DPAD_NAMES], "Mouse Btn Right");
-				strcpy(joy_bnames[SYS_MS_BTN_M - DPAD_NAMES], "Mouse Btn Middle");
-				strcpy(joy_bnames[SYS_MS_BTN_EMU - DPAD_NAMES], "Mouse Emu / Sniper");
-				joy_bcount = 16+1; //buttons + OSD/KTGL button
-				start_map_setting(joy_bcount + 6); // + dpad + Analog X/Y
-				menustate = MENU_JOYDIGMAP;
+				menustate = MENU_INPUT_SETTINGS;
 				menusub = 0;
 				break;
 			case 3:
@@ -4612,17 +4725,17 @@ void ScrollLongName(void)
 		{
 			char e[5];
 			memcpy(e + 1, fs_pFileExt, 3);
-			if (e[3] == 0x20)
-			{
-				e[3] = 0;
-				if (e[2] == 0x20)
-				{
-					e[2] = 0;
-				}
-			}
-			e[0] = '.';
-			e[4] = 0;
-			int l = strlen(e);
+	if (e[3] == 0x20)
+	{
+		e[3] = 0;
+		if (e[2] == 0x20)
+		{
+			e[2] = 0;
+		}
+	}
+	e[0] = '.';
+	e[4] = 0;
+	int l = strlen(e);
 			if ((len>l) && !strncasecmp(flist_SelectedItem()->altname + len - l, e, l)) len -= l;
 		}
 	}
@@ -4792,20 +4905,6 @@ void PrintDirectory(void)
 
 		OsdWriteOffset(i, s, i == (flist_iSelectedEntry() - flist_iFirstEntry()), 0, 0, leftchar);
 	}
-}
-
-void _strncpy(char* pStr1, const char* pStr2, size_t nCount)
-{
-	// customized strncpy() function to fill remaing destination string part with spaces
-
-	while (*pStr2 && nCount)
-	{
-		*pStr1++ = *pStr2++; // copy strings
-		nCount--;
-	}
-
-	while (nCount--)
-		*pStr1++ = ' '; // fill remaining space with spaces
 }
 
 static void set_text(const char *message, unsigned char code)
